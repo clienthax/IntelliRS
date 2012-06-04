@@ -63,7 +63,7 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 	public static DefaultTreeModel treeModel;
 
 	public UserInterface() {
-		super();
+		//super();
 		try {
 			//UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			UIManager.setLookAndFeel("org.jvnet.substance.skin.SubstanceRavenGraphiteGlassLookAndFeel");
@@ -90,7 +90,6 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 			viewport.add(this);
 			viewport.setVisible(true);
 			viewport.setSize(765 + 8, 503 + 34);
-			viewport.setResizable(true);
 			desktop.add(viewport);
 			frame.getContentPane().add(desktop, BorderLayout.CENTER);
 			initMenuBar();

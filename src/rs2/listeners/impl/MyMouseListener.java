@@ -8,8 +8,8 @@ import java.awt.event.MouseWheelListener;
 
 import javax.swing.SwingUtilities;
 
-import rs2.ClickType;
 import rs2.Main;
+import rs2.listeners.ClickType;
 
 public class MyMouseListener implements MouseListener, MouseMotionListener, MouseWheelListener {
 

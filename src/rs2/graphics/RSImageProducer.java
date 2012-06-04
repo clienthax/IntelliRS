@@ -2,7 +2,6 @@ package rs2.graphics;
 
 import java.awt.Component;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.image.BufferedImage;
@@ -34,14 +33,8 @@ public final class RSImageProducer {
 	public void draw(int x, int y, Graphics gfx) {
 		x += Main.scaledX;
 		y += Main.scaledY;
-		
 		double scale = Main.getInstance().getScale();
-		if (scale != 1) {
-			BufferedImage scaled = getBufferedImage(image.getScaledInstance((int) (width * scale), (int) (height * scale), Image.SCALE_DEFAULT));
-			gfx.drawImage(scaled, x, y, scaled.getWidth(), scaled.getHeight(), component);
-		} else {
-			gfx.drawImage(image, x, y, image.getWidth(), image.getHeight(), component);
-		}
+		gfx.drawImage(image, x, y, (int) (image.getWidth() * scale), (int) (image.getHeight() * scale), component);
 	}
 
 	public void draw(Graphics gfx, int x, int y, int clipX, int clipY, int clipWidth, int clipHeight) {
@@ -62,15 +55,7 @@ public final class RSImageProducer {
 		RSDrawingArea.initDrawingArea(width, height, pixels);
 	}
 
-    private BufferedImage getBufferedImage(Image image) {
-        BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
-        Graphics g = bufferedImage.createGraphics();
-        g.drawImage(image, 0, 0, null);
-        g.dispose();
-        return bufferedImage;
-    }
-
-	public final int[] pixels;
+    public final int[] pixels;
 	public final int width;
 	public final int height;
 	public final BufferedImage image;

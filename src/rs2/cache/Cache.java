@@ -36,6 +36,7 @@ public class Cache {
 				ResourceCache indice = new ResourceCache(data, new RandomAccessFile(indexFiles[i], "rw"), i + 1);
 				indices.add(indice);
 			}
+			System.out.println("Read cache files.");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

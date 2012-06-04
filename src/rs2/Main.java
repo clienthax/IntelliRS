@@ -8,10 +8,6 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Toolkit;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.FilteredImageSource;
@@ -31,18 +27,19 @@ import rs2.graphics.RSFont;
 import rs2.graphics.RSImage;
 import rs2.graphics.RSImageProducer;
 import rs2.graphics.RealFont;
+import rs2.listeners.ClickType;
 import rs2.listeners.impl.MyKeyListener;
 import rs2.listeners.impl.MyMouseListener;
 import rs2.swing.UserInterface;
 
 @SuppressWarnings("serial")
-public class Main extends Canvas implements Runnable, FocusListener, WindowListener {
+public class Main extends Canvas implements Runnable {
 
 	/**
 	 * Is an area being selected or already selected?
 	 * @return
 	 */
-	public boolean isSelected() {
+	public boolean multipleSelected() {
 		if (selectionX != -1 && selectionY != -1) {
 			return true;
 		}
@@ -314,8 +311,8 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			return;
 		}
 		g.setColor(new Color(255, 255, 255, 15));
-		int width = getWidth() + 1;
-		int height = getHeight() + 1;
+		int width = getCanvasWidth();
+		int height = getCanvasHeight();
 		int horizontalCount = width / (horizontalScale != 0 ? horizontalScale : 1);
 		int verticalCount = height / (verticalScale != 0 ? verticalScale : 1);
 		for (int index = 0, x = 0; index < horizontalCount + 1; index++, x += horizontalScale) {
@@ -394,10 +391,20 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 	}
 
 	/**
-	 * Draws the selection rectangle.
+	 * Resets the multiple selection area.
+	 */
+	public void resetSelection() {
+		selectionX = -1;
+		selectionY = -1;
+		selectionWidth = 0;
+		selectionHeight = 0;
+	}
+
+	/**
+	 * Draws the multiple selection area.
 	 */
 	public void drawSelection() {
-		if (isSelected()) {
+		if (multipleSelected()) {
 			if (selectionWidth < 0) {
 				selectionWidth *= -1;
 				selectionX -= selectionWidth;
@@ -418,7 +425,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		RSDrawingArea.drawFilledAlphaPixels(0, 0, getCanvasWidth(), getCanvasHeight(), Constants.BACKGROUND_COLOR, 256);
 		if (currentId != -1 && getInterface() != null) {
 			drawInterface(getInterface(), 0, 0, 0);
-			if (getHovered() != null && Settings.displayHover) {
+			if (hoverId != -1 && Settings.displayHover) {
 				RSDrawingArea.drawFilledAlphaPixels(getX(getInterface(), getHovered()), getY(getInterface(), getHovered()), getHovered().width, getHovered().height, 0xffffff, 50);
 				RSDrawingArea.drawUnfilledPixels(getX(getInterface(), getHovered()), getY(getInterface(), getHovered()), getHovered().width, getHovered().height, 0xffffff);
 			}
@@ -564,6 +571,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		adjustingGrid = true;
 	}
 	boolean adjustingGrid = false;
+	public int sliderThickness = 8;
 
 	/**
 	 * Processes mouse input for the interface editor.
@@ -574,15 +582,14 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			if (!menuOpen) {
 				processChildClicking();
 			}
-			int thickness = 8;
 			/* Grid adjustment */
-			if (clickInRegion(0, getCanvasWidth() - thickness, getCanvasHeight() - thickness, getCanvasHeight())) {
+			if (clickInRegion(0, getCanvasWidth() - sliderThickness, getCanvasHeight() - sliderThickness, getCanvasHeight())) {
 				if (Settings.displayGrid) {
 					if (getClickType() == ClickType.LEFT_CLICK || getClickType() == ClickType.LEFT_DRAG) {
 						adjustHorizontal(mouseX);
 					}
 				}
-			} else if (clickInRegion(getCanvasWidth() - thickness, getCanvasWidth(), 0, getCanvasHeight() - thickness)) {
+			} else if (clickInRegion(getCanvasWidth() - sliderThickness, getCanvasWidth(), 0, getCanvasHeight() - sliderThickness)) {
 				if (Settings.displayGrid) {
 					if (getClickType() == ClickType.LEFT_CLICK || getClickType() == ClickType.LEFT_DRAG) {
 						adjustVertical(mouseY);
@@ -591,32 +598,50 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			} else {
 				adjustingGrid = false;
 			}
-			thickness = 12;
 			if (!adjustingGrid) {
 				/* Selection rectangle dragging */
 				if (getClickType() == ClickType.LEFT_DRAG) {
 					selectionX = clickX;
 					selectionY = clickY;
-					int distX = calculateDragDistance()[0];
-					int distY = calculateDragDistance()[1];
-					selectionWidth = distX;
-					selectionHeight = distY;
+					int[] distances = calculateDragDistance();
+					selectionWidth = distances[0];
+					selectionHeight = distances[1];
 				}
 			}
 			/* Right clicking menus and actions */
-			if (getSelected() != null) {
-				if (getClickType() == ClickType.RIGHT_CLICK && clickInRegion(getSelectedX(), getSelectedX() + getSelected().width, getSelectedY(), getSelectedY() + getSelected().height)) {
+			if (multipleSelected()) {
+				if (getClickType() == ClickType.RIGHT_CLICK && clickInRegion(selectionX, selectionX + selectionWidth, selectionY, selectionY + selectionHeight)) {
+					menuActions = 1;
 					determineMenuSize();
 				}
 				if (menuOpen) {
 					if (getClickType() == ClickType.LEFT_CLICK) {
 						int _clickX = clickX;
 						int _clickY = clickY ;
-						for(int action = 0; action < childActions.length; action++) {
-							int posY = menuOffsetY + 31 + (childActions.length - 1 - action) * 15;
+						for(int action = 0; action < getActions().length; action++) {
+							int posY = menuOffsetY + 31 + (getActions().length - 1 - action) * 15;
 							if(_clickX > menuOffsetX && _clickX < menuOffsetX + menuWidth && _clickY > posY - 13 && _clickY < posY + 3) {
-								childAction = action;
-								perform(childAction);
+								actionIndex = action;
+								perform(actionIndex);
+							}
+						}
+					}
+				}
+			}
+			if (getSelected() != null) {
+				if (getClickType() == ClickType.RIGHT_CLICK && clickInRegion(getSelectedX(), getSelectedX() + getSelected().width, getSelectedY(), getSelectedY() + getSelected().height)) {
+					menuActions = 0;
+					determineMenuSize();
+				}
+				if (menuOpen) {
+					if (getClickType() == ClickType.LEFT_CLICK) {
+						int _clickX = clickX;
+						int _clickY = clickY ;
+						for(int action = 0; action < getActions().length; action++) {
+							int posY = menuOffsetY + 31 + (getActions().length - 1 - action) * 15;
+							if(_clickX > menuOffsetX && _clickX < menuOffsetX + menuWidth && _clickY > posY - 13 && _clickY < posY + 3) {
+								actionIndex = action;
+								perform(actionIndex);
 							}
 						}
 					}
@@ -625,42 +650,61 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			/* Close menu when mouse leaves menu area */
 			if (!mouseInRegion(menuOffsetX, menuOffsetX + menuWidth, menuOffsetY, menuOffsetY + menuHeight)) {
 				menuOpen = false;
-				childAction = -1;
+				actionIndex = -1;
 			}
 		}
 	}
 
-	public int childAction = -1;
-	public String[] childActions = { "Remove", "Move down", "Move up", "Move to back", "Move to front", "Lock", "Edit" };
+	private String[] childActions = { "Remove", "Move down", "Move up", "Move to back", "Move to front", "Lock", "Edit" };
+	private String[] selectionActions = { "Remove", "Move", "Lock", "Unselect" };
+
+	public String[] getActions() {
+		String[][] actions = { childActions, selectionActions };
+		return actions[menuActions];
+	}
+
+	public int menuActions = 0;
+	public int actionIndex = -1;
 
 	public void perform(int action) {
 		menuOpen = false;
-		switch (action) {
+		switch (menuActions) {
 			case 0:
-				ActionHandler.removeSelected();
+				switch (action) {
+					case 0:
+						ActionHandler.removeSelected();
+						break;
+					case 1:
+						ActionHandler.setZIndex(getSelectedIndex() - 1);
+						break;
+					case 2:
+						ActionHandler.setZIndex(getSelectedIndex() + 1);
+						break;
+					case 3:
+						ActionHandler.setZIndex(0);
+						break;
+					case 4:
+						ActionHandler.setZIndex(getInterface().children.length - 1);
+						break;
+					case 5:
+						if (getSelected().locked) {
+							ActionHandler.unlock();
+						} else {
+							ActionHandler.lock();
+						}
+						UserInterface.ui.rebuildTreeList();
+						break;
+					case 6:
+						ActionHandler.edit(getSelected());
+						break;
+				}
 				break;
 			case 1:
-				ActionHandler.setZIndex(getSelectedIndex() - 1);
-				break;
-			case 2:
-				ActionHandler.setZIndex(getSelectedIndex() + 1);
-				break;
-			case 3:
-				ActionHandler.setZIndex(0);
-				break;
-			case 4:
-				ActionHandler.setZIndex(getInterface().children.length - 1);
-				break;
-			case 5:
-				if (getSelected().locked) {
-					ActionHandler.unlock();
-				} else {
-					ActionHandler.lock();
+				switch (action) {
+					case 3:
+						resetSelection();
+						break;
 				}
-				UserInterface.ui.rebuildTreeList();
-				break;
-			case 6:
-				ActionHandler.edit(getSelected());
 				break;
 		}
 	}
@@ -679,7 +723,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			return;
 		}
 		if (_clickX < 0 || _clickY < 0 || _clickX > 0 + rsi.width || _clickY > 0 + rsi.height) {
-			return;
+			//return;
 		}
 		hoverId = -1;
 		int childCount = rsi.children.length;
@@ -690,9 +734,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			posX += child.drawOffsetX;
 			posY += child.drawOffsetY;
 			if (mouseInRegion(posX, posX + child.width, posY, posY + child.height)) {
-				if (getClickType() == ClickType.MOVED) {
-					hoverId = child.id;
-				}
+				hoverId = child.id;
 				if (getClickType() == ClickType.CTRL_DRAG && selectedId != -1 && selectedId != currentId && getScale() == 1) {
 					ActionHandler.setSelectedX(_mouseX - (getSelected().width / 2));
 					ActionHandler.setSelectedY(_mouseY - (getSelected().height / 2));
@@ -715,7 +757,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 				if(child.actionType == 1) {
 					boolean flag = false;
 					if(child.contentType != 0) {
-						//TODO
+						//TODO: Content type.
 					}
 					if(!flag) {
 						menuActionName[menuActionRow] = child.tooltip;
@@ -831,7 +873,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 
 	public void init() {
 		main = this;
-		//initClientFrame(getCanvasWidth(), getCanvasHeight());
+		ActionHandler.main = main;
 		startRunnable(this, 1);
 	}
 
@@ -907,7 +949,6 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 	}
 
 	public void process() {
-		currentTime++;
 		processInput();
 		checkSize();
 	}
@@ -942,8 +983,6 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 	public static void main(String args[]) {
 		Settings.checkDirectory();
 		Settings.read();
-		main = new Main();
-		ActionHandler.main = main;
 		new UserInterface();
 	}
 
@@ -1053,10 +1092,9 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		System.gc();
 	}
 
-	void initialize() {
-		updateProgress("IntelliRS is starting...", 20);
+	void startUp() {
 		try {
-			updateProgress("Unpacking archives...", 40);
+			updateProgress("Unpacking archives...", 30);
 			titleArchive = getArchive(1);
 			small = new RSFont(false, "p11_full", titleArchive);
 			regular = new RSFont(false, "p12_full", titleArchive);
@@ -1073,7 +1111,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			RSInterface.load(interfaces, media, fonts);
 			mediaArchive.updateKnown();
 			updateProgress("Complete!", 100);
-			return;
+			System.gc();
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -1106,8 +1144,8 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 			RSInterface child = RSInterface.cache[rsi.children[index]];
 			x += child.drawOffsetX;
 			y += child.drawOffsetY;
-			if(child.contentType > 0) {
-				//drawFriendsListOrWelcomeScreen(child);
+			if(child.contentType > 0) {	
+				//TODO: Content type.
 			}
 			if(child.type == 0) {
 				if(child.scrollPosition > child.scrollMax - child.height)
@@ -1346,7 +1384,7 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 						}
 
 					}
-				} else if (child.type == 8 && (anInt1500 == child.id || anInt1044 == child.id || anInt1129 == child.id) && anInt1501 == 50) {
+				} else if (child.type == 8 && hoverId == child.id) {
                     int boxWidth = 0;
 					int boxHeight = 0;
 					RSFont font = regular;
@@ -1473,10 +1511,6 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		RSDrawingArea.setBounds(startX, endX, startY, endY);
 	}
 
-	public void processDrawing() {
-		displayInterfacePane();
-	}
-
 	private int menuOffsetX;
 	private int menuOffsetY;
 	private int menuWidth;
@@ -1494,27 +1528,27 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		arial[1].drawString("Choose Action", x + 3, y + 14, 0xFFFFFF, true);
 		int _mouseX = mouseX - offsetX;
 		int _mouseY = mouseY - offsetY;
-		for(int action = 0; action < childActions.length; action++) {
-			int posY = y + 31 + (childActions.length - 1 - action) * 15;
+		for(int action = 0; action < getActions().length; action++) {
+			int posY = y + 31 + (getActions().length - 1 - action) * 15;
 			int color = Constants.TEXT_COLOR;
 			if(_mouseX > x && _mouseX < x + width && _mouseY > posY - 13 && _mouseY < posY + 3) {
 				color = 0xFFFFFF;
 				RSDrawingArea.drawFilledAlphaPixels(x + 2, posY - 13, menuWidth - 4, 16, 0x9F9F9F, 220);
 			}
-			arial[1].drawString(childActions[action], x + 3, posY, color, true);
+			arial[1].drawString(getActions()[action], x + 3, posY, color, true);
 		}
 	}
 
 	private void determineMenuSize() {
-		int width = regular.getEffectTextWidth("Choose Option");
-		for(int action = 0; action < childActions.length; action++) {
-			int itemWwidth = bold.getEffectTextWidth(childActions[action]);
+		int width = regular.getEffectTextWidth("Choose Action");
+		for(int action = 0; action < getActions().length; action++) {
+			int itemWwidth = bold.getEffectTextWidth(getActions()[action]);
 			if(itemWwidth > width) {
 				width = itemWwidth;
 			}
 		}
 		width += 8;
-		int height = 15 * childActions.length + 21;
+		int height = 15 * getActions().length + 21;
 		int startX =  0;
 		int endX = getCanvasWidth();
 		int startY = 0;
@@ -1721,6 +1755,10 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		return false;
 	}
 
+	/**
+	 * Gets the current zoom scale.
+	 * @return
+	 */
 	public double getScale() {
 		if (zoom < 100) {
 			zoom = 100;
@@ -1731,12 +1769,24 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		return (zoom / 100D);
 	}
 
+	/**
+	 * Gets the canvas width.
+	 * @return
+	 */
 	public int getCanvasWidth() {
-		return getWidth();
+		return getWidth() + 1;
 	}
 
+	/**
+	 * Gets the canvas height.
+	 * @return
+	 */
 	public int getCanvasHeight() {
-		return getHeight();
+		return getHeight() + 1;
+	}
+
+	public void processDrawing() {
+		displayInterfacePane();
 	}
 
 	public Main() {
@@ -1801,7 +1851,6 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 	private RSImageProducer imageProducer;
 	private int menuActionRow;
 	private boolean aBoolean1149;
-	public static int currentTime;
 	private String[] menuActionName;
 	public RSFont small;
 	public RSFont regular;
@@ -1820,91 +1869,12 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 		addMouseMotionListener(mouseListener);
 		addMouseWheelListener(mouseListener);
 		addKeyListener(new MyKeyListener());
-		addFocusListener(this);
 		displayProgress("Loading...", 0);
-		initialize();
-		int opos = 0;
-		int ratio = 256;
-		int delay = 1;
-		int count = 0;
-		int intex = 0;
-		for(int index = 0; index < 10; index++) {
-			times[index] = System.currentTimeMillis();
-		}
+		startUp();
 		do {
-			if(timeRunning < 0) {
-				break;
-			}
-			if(timeRunning > 0) {
-				timeRunning--;
-				if(timeRunning == 0) {
-					exit();
-					return;
-				}
-			}
-			int k1 = ratio;
-			int i2 = delay;
-			ratio = 300;
-			delay = 1;
-			long systemTime = System.currentTimeMillis();
-			if(times[opos] == 0L) {
-				ratio = k1;
-				delay = i2;
-			} else if(systemTime > times[opos]) {
-				ratio = (int)((long)(2560 * delayTime) / (systemTime - times[opos]));
-			}
-			if(ratio < 25) {
-				ratio = 25;
-			}
-			if(ratio > 256) {
-				ratio = 256;
-				delay = (int)((long)delayTime - (systemTime - times[opos]) / 10L);
-			}
-			if(delay > delayTime) {
-				delay = delayTime;
-			}
-			times[opos] = systemTime;
-			opos = (opos + 1) % 10;
-			if(delay > 1) {
-				for(int index = 0; index < 10; index++) {
-					if(times[index] != 0L) {
-						times[index] += delay;
-					}
-				}
-			}
-			if(delay < minDelay) {
-				delay = minDelay;
-			}
-			try {
-				Thread.sleep(delay);
-			} catch(InterruptedException e) {
-				intex++;
-			}
-			for(; count < 256; count += ratio) {
-				aLong29 = clickTime;
-				process();
-			}
-			count &= 0xff;
-			if(delayTime > 0) {
-				fps = (1000 * ratio) / (delayTime * 256);
-			}
+			processInput();
 			processDrawing();
-			if(shouldDebug) {
-				System.out.println("ntime:" + systemTime);
-				for(int index = 0; index < 10; index++) {
-					int otim = ((opos - index - 1) + 20) % 10;
-					System.out.println("otim" + otim + ":" + times[otim]);
-				}
-				System.out.println("fps:" + fps + " ratio:" + ratio + " count:" + count);
-				System.out.println("del:" + delay + " deltime:" + delayTime + " mindel:" + minDelay);
-				System.out.println("intex:" + intex + " opos:" + opos);
-				shouldDebug = false;
-				intex = 0;
-			}
 		} while(true);
-		if(timeRunning == -1) {
-			exit();
-		}
 	}
 
 	private void exit() {
@@ -1973,7 +1943,6 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 	private int timeRunning;
 	private int delayTime;
 	int minDelay;
-	private final long times[] = new long[10];
 	int fps;
 	boolean shouldDebug;
 	int myWidth;
@@ -1987,59 +1956,5 @@ public class Main extends Canvas implements Runnable, FocusListener, WindowListe
 	protected int writeIndex;
 	public static int anInt34;
 	private BufferStrategy strategy;
-
-	@Override
-	public void windowActivated(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void windowClosed(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void windowClosing(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void windowDeactivated(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void windowDeiconified(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void windowIconified(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void windowOpened(WindowEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void focusGained(FocusEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void focusLost(FocusEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
 
 }

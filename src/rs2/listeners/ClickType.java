@@ -1,4 +1,4 @@
-package rs2;
+package rs2.listeners;
 
 
 public enum ClickType {
