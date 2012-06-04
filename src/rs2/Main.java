@@ -1,10 +1,18 @@
 package rs2;
+import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Insets;
 import java.awt.Toolkit;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.FilteredImageSource;
 import java.awt.image.ImageProducer;
@@ -23,15 +31,33 @@ import rs2.graphics.RSFont;
 import rs2.graphics.RSImage;
 import rs2.graphics.RSImageProducer;
 import rs2.graphics.RealFont;
+import rs2.listeners.impl.MyKeyListener;
+import rs2.listeners.impl.MyMouseListener;
 import rs2.swing.UserInterface;
 
 @SuppressWarnings("serial")
-public class Main extends MyApplet {
+public class Main extends Canvas implements Runnable, FocusListener, WindowListener {
 
+	/**
+	 * Is an area being selected or already selected?
+	 * @return
+	 */
+	public boolean isSelected() {
+		if (selectionX != -1 && selectionY != -1) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Gets the font metrics.
+	 * @param font
+	 * @return
+	 */
 	public FontMetrics getMetrics(Font font) {
 		FontMetrics metrics = null;
-		if (font != null && super.getGameComponent() != null) {
-			metrics = super.getGameComponent().getFontMetrics(font);
+		if (font != null) {
+			metrics = getFontMetrics(font);
 		}
 		return metrics;
 	}
@@ -122,6 +148,10 @@ public class Main extends MyApplet {
 		return RSInterface.cache[id];
 	}
 
+	/**
+	 * Gets the selected child's index in the parent's children.
+	 * @return
+	 */
 	public static int getSelectedIndex() {
 		RSInterface parent = getInterface();
 		if (parent.children == null) {
@@ -135,12 +165,21 @@ public class Main extends MyApplet {
 		return -1;
 	}
 
+	/**
+	 * Gets the selected child's x-position.
+	 * @return
+	 */
 	public static int getSelectedX() {
 		if (selectedId == -1) {
 			return 0;
 		}
 		return getX(getInterface(), getSelected());
 	}
+
+	/**
+	 * Gets the selected child's y-position.
+	 * @return
+	 */
 	public static int getSelectedY() {
 		if (selectedId == -1) {
 			return 0;
@@ -148,6 +187,12 @@ public class Main extends MyApplet {
 		return getY(getInterface(), getSelected());
 	}
 
+	/**
+	 * Gets the x-position of a child on the parent interface.
+	 * @param parent The parent interface.
+	 * @param child The child to find the x-position for.
+	 * @return
+	 */
 	public static int getX(RSInterface parent, RSInterface child) {
 		if (parent == null || parent.children == null) {
 			return -1;
@@ -160,6 +205,12 @@ public class Main extends MyApplet {
 		return -1;
 	}
 
+	/**
+	 * Gets the y-position of a child on the parent interface.
+	 * @param parent The parent interface.
+	 * @param child The child to find the y-position for.
+	 * @return
+	 */
 	public static int getY(RSInterface parent, RSInterface child) {
 		if (parent == null || parent.children == null) {
 			return -1;
@@ -172,30 +223,10 @@ public class Main extends MyApplet {
 		return -1;
 	}
 
-	public int[] alpha = { 0, 0, 0, 0 };
-	public boolean[] increasing = { false, false };
-	public int glowRate = 8;
-	public int mouseHover = -1;
-
-	public void glow(int index) {
-		if (alpha[index] < 256 && increasing[index]) {
-			alpha[index] += glowRate;
-		}
-		if (alpha[index] == 256) {
-			increasing[index] = false;
-		}
-		if (alpha[index] > 0 && !increasing[index]) {
-			alpha[index] -= glowRate;
-		}
-		if (alpha[index] <= 0) {
-			increasing[index] = true;
-			alpha[index] = 0;
-		}
-	}
-
-	public static int verticalPos;
-	public static int horizontalPos;
-
+	/**
+	 * Selects the specified child index.
+	 * @param index
+	 */
 	public static void selectChild(int index) {
 		RSInterface rsi = getInterface();
 		if (rsi != null) {
@@ -207,30 +238,48 @@ public class Main extends MyApplet {
 		}
 	}
 
-	public static void selectInterface(int id) {
+	/**
+	 * Selects the specified id as the current interface.
+	 * @param id
+	 */
+	public void selectInterface(int id) {
 		selectedId = -1;
 		currentId = id;
-		verticalPos = appletHeight / 2;
-		horizontalPos = appletWidth / 2;
+		verticalPos = getCanvasHeight() / 2;
+		horizontalPos = getCanvasWidth() / 2;
 		verticalScale = 10;
 		horizontalScale = 10;
 		UserInterface.ui.buildTreePane();
 	}
 
-	public int getScrollWidth() {
-		return appletWidth / 5;
+	/**
+	 * Gets the horizontal slider width.
+	 * @return
+	 */
+	public int getSliderWidth() {
+		return getCanvasWidth() / 5;
 	}
 
-	public int getScrollHeight() {
-		return appletHeight / 5;
+	/**
+	 * Gets the vertical slider height.
+	 * @return
+	 */
+	public int getSliderHeight() {
+		return getCanvasHeight() / 5;
 	}
 
-	public void drawScrollbars() {
+	/**
+	 * Draws the grid sliders.
+	 */
+	public void drawSliders() {
+		if (!Settings.displayGrid) {
+			return;
+		}
 		int background = 0x151515;
 		int bar = 0x666666;
 		int thickness = 8;
 		int start = 150;
-		if (mouseInRegion(0, appletWidth - thickness, appletHeight - thickness, appletHeight)) {
+		if (mouseInRegion(0, getCanvasWidth() - thickness, getCanvasHeight() - thickness, getCanvasHeight())) {
 			if (alpha[2] < 50) {
 				alpha[2] += 5;
 			}
@@ -239,7 +288,7 @@ public class Main extends MyApplet {
 				alpha[2] -= 5;
 			}
 		}
-		if (mouseInRegion(appletWidth - thickness, appletWidth, 0, appletHeight - thickness)) {
+		if (mouseInRegion(getCanvasWidth() - thickness, getCanvasWidth(), 0, getCanvasHeight() - thickness)) {
 			if (alpha[3] < 50) {
 				alpha[3] += 5;
 			}
@@ -248,10 +297,10 @@ public class Main extends MyApplet {
 				alpha[3] -= 5;
 			}
 		}
-		RSDrawingArea.drawRoundedRectangle(0, appletHeight - thickness, appletWidth - thickness, thickness, background, start + alpha[2], true, false);
-		RSDrawingArea.drawRoundedRectangle(appletWidth - thickness, 0, thickness, appletHeight - thickness, background, start + alpha[3], true, false);
-		RSDrawingArea.drawRoundedRectangle(horizontalPos - (getScrollWidth() / 2), appletHeight - thickness, getScrollWidth(), thickness, bar, start + (alpha[2] * 2), true, false);
-		RSDrawingArea.drawRoundedRectangle(appletWidth - thickness, verticalPos - (getScrollHeight() / 2), thickness, getScrollHeight(), bar, start + (alpha[3] * 2), true, false);
+		RSDrawingArea.drawRoundedRectangle(0, getCanvasHeight() - thickness, getCanvasWidth() - thickness, thickness, background, start + alpha[2], true, false);
+		RSDrawingArea.drawRoundedRectangle(getCanvasWidth() - thickness, 0, thickness, getCanvasHeight() - thickness, background, start + alpha[3], true, false);
+		RSDrawingArea.drawRoundedRectangle(horizontalPos - (getSliderWidth() / 2), getCanvasHeight() - thickness, getSliderWidth(), thickness, bar, start + (alpha[2] * 2), true, false);
+		RSDrawingArea.drawRoundedRectangle(getCanvasWidth() - thickness, verticalPos - (getSliderHeight() / 2), thickness, getSliderHeight(), bar, start + (alpha[3] * 2), true, false);
 	}
 
 	public static int horizontalScale = 10;
@@ -260,37 +309,20 @@ public class Main extends MyApplet {
 	/**
 	 * Displays the grid.
 	 */
-	public void drawGrid() {
-		int color = 0xffffff;
-		int alpha = 15;
-		int horizontalCount = appletWidth / (horizontalScale != 0 ? horizontalScale : 1);
-		int verticalCount = appletHeight / (verticalScale != 0 ? verticalScale : 1);
-		for (int index = 0, x = 0; index < horizontalCount + 1; index++, x += horizontalScale) {
-			RSDrawingArea.drawVerticalAlphaLine(x, 0, appletHeight, color, alpha);
-		}
-		for (int index = 0, y = 0; index < verticalCount + 1; index++, y += verticalScale) {
-			RSDrawingArea.drawHorizontalAlphaLine(0, y, appletWidth, color, alpha);
-		}
-	}
-
-	public void drawTooltips() {
-		if (mouseHover == -1) {
+	public void drawGrid(Graphics g) {
+		if (!Settings.displayGrid) {
 			return;
 		}
-		String[][] tooltips = { { "Left click to increase the grid", "scale, and right click to decrease", "the grid scale." }, { "This is a test tooltip." } };
-		int total = tooltips[mouseHover].length;
-		int width = -1;
-		int height = (total * 15) + 8;
-		for (int index = 0; index < total; index++) {
-			if (regular.getTextWidth(tooltips[mouseHover][index]) > width) {
-				width = regular.getTextWidth(tooltips[mouseHover][index]);
-			}
+		g.setColor(new Color(255, 255, 255, 15));
+		int width = getWidth() + 1;
+		int height = getHeight() + 1;
+		int horizontalCount = width / (horizontalScale != 0 ? horizontalScale : 1);
+		int verticalCount = height / (verticalScale != 0 ? verticalScale : 1);
+		for (int index = 0, x = 0; index < horizontalCount + 1; index++, x += horizontalScale) {
+			g.drawLine(x, 0, x, height);
 		}
-		width += 8;
-		RSDrawingArea.drawRoundedRectangle(super.mouseX - (width + 3), super.mouseY - (height + 3), width, height, 0x1c1c1c, 220, true, false);
-		RSDrawingArea.drawRoundedRectangle(super.mouseX - (width + 3), super.mouseY - (height + 3), width, height, 0xffffff, 220, false, false);
-		for (int index = 0; index < total; index++) {
-			regular.drawShadowedString(tooltips[mouseHover][index], super.mouseX - width + 1, super.mouseY - height + 12 + (index * 15), 0xffffff, true);
+		for (int index = 0, y = 0; index < verticalCount + 1; index++, y += verticalScale) {
+			g.drawLine(0, y, width, y);
 		}
 	}
 
@@ -299,12 +331,12 @@ public class Main extends MyApplet {
 	 */
 	public void drawDataPane() {
 		String[] names = { "currentId:", "selectedId:", "selectedX:", "selectedY:", "locked:", "hoverId:" };
-		Object[] values = { currentId, selectedId, selectedX, selectedY, getSelected() != null ? getSelected().locked : false, hoverId };
+		Object[] values = { currentId, selectedId, getSelectedX(), getSelectedY(), getSelected() != null ? getSelected().locked : false, hoverId };
 		int width = 80;
 		int height = (names.length * 12) + 2;
 		int alpha = 100;
 		int x = 5;
-		int y = appletHeight - (height + 5);
+		int y = getCanvasHeight() - (height + 5);
 		for (int index = 0; index < names.length; index++) {
 			if (small.getTextWidth(names[index] + " " + values[index]) > width) {
 				width = small.getTextWidth(names[index] + " " + values[index]);
@@ -342,10 +374,10 @@ public class Main extends MyApplet {
 	 */
 	public int[] calculateDragDistance() {
 		int[] distances = new int[2];
-		int startX = super.clickX;
-		int startY = super.clickY;
-		int currentX = super.mouseX;
-		int currentY = super.mouseY;
+		int startX = clickX;
+		int startY = clickY;
+		int currentX = mouseX;
+		int currentY = mouseY;
 		if (startX < currentX) {
 			distances[0] = +(currentX - startX);
 		}
@@ -362,15 +394,30 @@ public class Main extends MyApplet {
 	}
 
 	/**
+	 * Draws the selection rectangle.
+	 */
+	public void drawSelection() {
+		if (isSelected()) {
+			if (selectionWidth < 0) {
+				selectionWidth *= -1;
+				selectionX -= selectionWidth;
+			}
+			if (selectionHeight < 0) {
+				selectionHeight *= -1;
+				selectionY -= selectionHeight;
+			}
+			RSDrawingArea.drawUnfilledPixels(selectionX, selectionY, selectionWidth, selectionHeight, 0x00FFFF);
+			RSDrawingArea.drawFilledAlphaPixels(selectionX, selectionY, selectionWidth, selectionHeight, 0x00FFFF, 125);
+		}
+	}
+
+	/**
 	 * Displays the interface.
 	 */
 	private void displayInterfacePane() {
-		RSDrawingArea.drawFilledAlphaPixels(0, 0, appletWidth, appletHeight, Constants.BACKGROUND_COLOR, 256);
+		RSDrawingArea.drawFilledAlphaPixels(0, 0, getCanvasWidth(), getCanvasHeight(), Constants.BACKGROUND_COLOR, 256);
 		if (currentId != -1 && getInterface() != null) {
 			drawInterface(getInterface(), 0, 0, 0);
-			if (Settings.displayGrid) {
-				drawGrid();
-			}
 			if (getHovered() != null && Settings.displayHover) {
 				RSDrawingArea.drawFilledAlphaPixels(getX(getInterface(), getHovered()), getY(getInterface(), getHovered()), getHovered().width, getHovered().height, 0xffffff, 50);
 				RSDrawingArea.drawUnfilledPixels(getX(getInterface(), getHovered()), getY(getInterface(), getHovered()), getHovered().width, getHovered().height, 0xffffff);
@@ -384,9 +431,7 @@ public class Main extends MyApplet {
 					for (int index = 0; index < getInterface().children.length; index++) {
 						if (getInterface().children[index] == selectedId) {
 							x = getInterface().childX[index];
-							selectedX = x;
 							y = getInterface().childY[index];
-							selectedY = y;
 							child = RSInterface.cache[getInterface().children[index]];
 							break;
 						} else {
@@ -395,9 +440,7 @@ public class Main extends MyApplet {
 								for (int childIndex = 0; childIndex < child.children.length; childIndex++) {
 									if (child.children[childIndex] == selectedId) {
 										x = getInterface().childX[index] + child.childX[childIndex];
-										selectedX = x;
 										y = getInterface().childY[index] + child.childY[childIndex];
-										selectedY = y;
 										child = RSInterface.cache[child.children[childIndex]];
 										break;
 									}
@@ -415,27 +458,9 @@ public class Main extends MyApplet {
 			}
 		}
 		showLockedChildren();
-		if (Constants.DEBUG_MOUSE) {
-			if (super.mouseX != -1 && super.mouseY != -1) {
-				int color = 0x00FFFF;
-				int x = super.mouseX;
-				int y = super.mouseY;
-				if (getScale() != 1) {
-					x /= getScale();
-					y /= getScale();
-					x -= (int) (scaledX / getScale());
-					y -= (int) (scaledY / getScale());
-				}
-				RSDrawingArea.drawHorizontalLine(0, y, imageProducer.scaledWidth, color);
-				RSDrawingArea.drawVerticalLine(x, 0, imageProducer.scaledHeight, color);
-			}
-		}
-		glow(1);
+		drawSelection();
 		if (currentId != -1 && getInterface() != null) {
-			if (Settings.displayGrid) {
-				drawScrollbars();
-			}
-			drawTooltips();
+			drawSliders();
 			if (menuOpen) {
 				drawMenu(0, 0);
 			}
@@ -443,9 +468,34 @@ public class Main extends MyApplet {
 		if (Settings.displayData) {
 			drawDataPane();
 		}
-		imageProducer.drawGraphics(0, 0, super.graphics);
+		Graphics2D graphics = (Graphics2D) strategy.getDrawGraphics();
+		imageProducer.drawGraphics(0, 0, graphics);
+		drawGrid(graphics);
+		debugMouse(graphics);
+		graphics.dispose();
+		strategy.show();
 	}
 
+	/**
+	 * Displays the mouse location and mouse information.
+	 * @param g
+	 */
+	public void debugMouse(Graphics g) {
+		if (Constants.DEBUG_MOUSE) {
+			if (mouseX != -1 && mouseY != -1) {
+				g.setColor(new Color(0, 255, 255));
+				int x = mouseX;
+				int y = mouseY;
+				g.drawLine(x, 0, x, getCanvasHeight());
+				g.drawLine(0, y, getCanvasWidth(), y);
+			}
+		}
+	}
+
+	/**
+	 * Adjusts the horizontal grid scale.
+	 * @param newX
+	 */
 	public void adjustHorizontal(int newX) {
 		if (getScale() != 1) {
 			return;
@@ -454,16 +504,16 @@ public class Main extends MyApplet {
 			return;
 		}
 		int startX = horizontalPos;
-		if (newX < (getScrollWidth() / 2)) {
-			horizontalPos = (getScrollWidth() / 2);
+		if (newX < (getSliderWidth() / 2)) {
+			horizontalPos = (getSliderWidth() / 2);
 			return;
 		}
-		if (newX > appletWidth - (getScrollWidth() / 2) - 8) {
-			horizontalPos = appletWidth - (getScrollWidth() / 2) - 8;
+		if (newX > getCanvasWidth() - (getSliderWidth() / 2) - 8) {
+			horizontalPos = getCanvasWidth() - (getSliderWidth() / 2) - 8;
 			return;
 		}
 		horizontalPos = newX;
-		int percent = (int) (((double) (horizontalPos - (getScrollWidth() / 2)) / (double) (appletWidth - (getScrollWidth() / 2) - 8)) * 100D);
+		int percent = (int) (((double) (horizontalPos - (getSliderWidth() / 2)) / (double) (getCanvasWidth() - (getSliderWidth() / 2) - 8)) * 100D);
 		percent = (percent / 10) * 2;
 		boolean left = startX - newX > 0 ? true : false;
 		if (left) {
@@ -475,8 +525,13 @@ public class Main extends MyApplet {
 				horizontalScale = percent < 20 ? percent : 20;
 			}
 		}
+		adjustingGrid = true;
 	}
 
+	/**
+	 * Adjusts the vertical grid scale.
+	 * @param newX
+	 */
 	public void adjustVertical(int newX) {
 		if (getScale() != 1) {
 			return;
@@ -485,16 +540,16 @@ public class Main extends MyApplet {
 			return;
 		}
 		int startX = verticalPos;
-		if (newX < (getScrollHeight() / 2)) {
-			verticalPos = (getScrollHeight() / 2);
+		if (newX < (getSliderHeight() / 2)) {
+			verticalPos = (getSliderHeight() / 2);
 			return;
 		}
-		if (newX > appletHeight - (getScrollHeight() / 2) - 8) {
-			verticalPos = appletHeight - (getScrollHeight() / 2) - 8;
+		if (newX > getCanvasHeight() - (getSliderHeight() / 2) - 8) {
+			verticalPos = getCanvasHeight() - (getSliderHeight() / 2) - 8;
 			return;
 		}
 		verticalPos = newX;
-		int percent = (int) (((double) (verticalPos - (getScrollHeight() / 2)) / (double) (appletHeight - (getScrollHeight() / 2) - 8)) * 100D);
+		int percent = (int) (((double) (verticalPos - (getSliderHeight() / 2)) / (double) (getCanvasHeight() - (getSliderHeight() / 2) - 8)) * 100D);
 		percent = (percent / 10) * 2;
 		boolean left = startX - newX > 0 ? true : false;
 		if (left) {
@@ -506,77 +561,60 @@ public class Main extends MyApplet {
 				verticalScale = percent < 20 ? percent : 20;
 			}
 		}
+		adjustingGrid = true;
 	}
+	boolean adjustingGrid = false;
 
+	/**
+	 * Processes mouse input for the interface editor.
+	 */
 	public void processInput() {
 		if (getInterface() != null) {
+			/* Interface children clicking */
 			if (!menuOpen) {
 				processChildClicking();
 			}
-			if (getScale() != 1) {
-				int diffX = 0;
-				int diffY = 0;
-				if (super.clickType == DRAG) {
-					int width = imageProducer.scaled != null ? imageProducer.scaledWidth : 0;
-					int height = imageProducer.scaled != null ? imageProducer.scaledHeight : 0;
-					int startX = super.clickX;
-					int startY = super.clickY;
-
-					if (startX > super.mouseX) {
-						diffX = -(startX - super.mouseX);
-					}
-					if (startX < super.mouseX) {
-						diffX = +(super.mouseX - startX);
-					}
-
-					if (startY > super.mouseY) {
-						diffY = -(startY - super.mouseY);
-					}
-					if (startY < super.mouseY) {
-						diffY = +(super.mouseX - startY);
-					}
-
-					scaledX += diffX < 0 ? (int) (-getScale() * 3) : (int) (getScale() * 3);
-					scaledY += diffY < 0 ? (int) (-getScale() * 3) : (int) (getScale() * 3);
-
-					if (scaledX < (appletWidth - width)) {
-						scaledX = (appletWidth - width);
-					}
-					if (scaledX > 0) {
-						scaledX = 0;
-					}
-					if (scaledY < (appletHeight - height)) {
-						scaledY = (appletHeight - height);
-					}
-					if (scaledY > 0) {
-						scaledY = 0;
-					}
-				}
-			}
 			int thickness = 8;
-			if (Settings.displayGrid) {
-				if (clickInRegion(0, appletWidth - thickness, appletHeight - thickness, appletHeight)) {
-					if (super.clickType == LEFT || super.clickType == DRAG) {
-						adjustHorizontal(super.mouseX);
+			/* Grid adjustment */
+			if (clickInRegion(0, getCanvasWidth() - thickness, getCanvasHeight() - thickness, getCanvasHeight())) {
+				if (Settings.displayGrid) {
+					if (getClickType() == ClickType.LEFT_CLICK || getClickType() == ClickType.LEFT_DRAG) {
+						adjustHorizontal(mouseX);
 					}
 				}
-				if (clickInRegion(appletWidth - thickness, appletWidth, 0, appletHeight - thickness)) {
-					if (super.clickType == LEFT || super.clickType == DRAG) {
-						adjustVertical(super.mouseY);
+			} else if (clickInRegion(getCanvasWidth() - thickness, getCanvasWidth(), 0, getCanvasHeight() - thickness)) {
+				if (Settings.displayGrid) {
+					if (getClickType() == ClickType.LEFT_CLICK || getClickType() == ClickType.LEFT_DRAG) {
+						adjustVertical(mouseY);
 					}
+				}
+			} else {
+				adjustingGrid = false;
+			}
+			thickness = 12;
+			if (!adjustingGrid) {
+				/* Selection rectangle dragging */
+				if (getClickType() == ClickType.LEFT_DRAG) {
+					selectionX = clickX;
+					selectionY = clickY;
+					int distX = calculateDragDistance()[0];
+					int distY = calculateDragDistance()[1];
+					selectionWidth = distX;
+					selectionHeight = distY;
 				}
 			}
+			/* Right clicking menus and actions */
 			if (getSelected() != null) {
-				if (super.clickType == super.RIGHT && clickInRegion(selectedX, selectedX + getSelected().width, selectedY, selectedY + getSelected().height)) {
+				if (getClickType() == ClickType.RIGHT_CLICK && clickInRegion(getSelectedX(), getSelectedX() + getSelected().width, getSelectedY(), getSelectedY() + getSelected().height)) {
 					determineMenuSize();
 				}
 				if (menuOpen) {
-					if (super.clickType == super.LEFT) {
-						int clickX = super.saveClickX;
-						int clickY = super.saveClickY ;
+					if (getClickType() == ClickType.LEFT_CLICK) {
+						int _clickX = clickX;
+						int _clickY = clickY ;
 						for(int action = 0; action < childActions.length; action++) {
 							int posY = menuOffsetY + 31 + (childActions.length - 1 - action) * 15;
-							if(clickX > menuOffsetX && clickX < menuOffsetX + menuWidth && clickY > posY - 13 && clickY < posY + 3) {
+							if(_clickX > menuOffsetX && _clickX < menuOffsetX + menuWidth && _clickY > posY - 13 && _clickY < posY + 3) {
 								childAction = action;
 								perform(childAction);
 							}
@@ -584,6 +622,7 @@ public class Main extends MyApplet {
 					}
 				}
 			}
+			/* Close menu when mouse leaves menu area */
 			if (!mouseInRegion(menuOffsetX, menuOffsetX + menuWidth, menuOffsetY, menuOffsetY + menuHeight)) {
 				menuOpen = false;
 				childAction = -1;
@@ -628,18 +667,18 @@ public class Main extends MyApplet {
 
 	public void processChildClicking() {
 		RSInterface rsi = getInterface();
-		int mouseX = super.mouseX;
-		int mouseY = super.mouseY;
-		int clickX = super.clickX;
-		int clickY = super.clickY;
 		int offsetY = 0;
+		int _mouseX = mouseX;
+		int _mouseY = mouseY;
+		int _clickX = clickX;
+		int _clickY = clickY;
 		if (rsi.type != 0 || rsi.children == null || rsi.showInterface) {
 			return;
 		}
-		if (mouseX < 0 || mouseY < 0 || mouseX > 0 + rsi.width || mouseY > 0 + rsi.height) {
+		if (_mouseX < 0 || _mouseY < 0 || _mouseX > 0 + rsi.width || _mouseY > 0 + rsi.height) {
 			return;
 		}
-		if (clickX < 0 || clickY < 0 || clickX > 0 + rsi.width || clickY > 0 + rsi.height) {
+		if (_clickX < 0 || _clickY < 0 || _clickX > 0 + rsi.width || _clickY > 0 + rsi.height) {
 			return;
 		}
 		hoverId = -1;
@@ -651,22 +690,28 @@ public class Main extends MyApplet {
 			posX += child.drawOffsetX;
 			posY += child.drawOffsetY;
 			if (mouseInRegion(posX, posX + child.width, posY, posY + child.height)) {
-				hoverId = child.id;
+				if (getClickType() == ClickType.MOVED) {
+					hoverId = child.id;
+				}
+				if (getClickType() == ClickType.CTRL_DRAG && selectedId != -1 && selectedId != currentId && getScale() == 1) {
+					ActionHandler.setSelectedX(_mouseX - (getSelected().width / 2));
+					ActionHandler.setSelectedY(_mouseY - (getSelected().height / 2));
+					return;
+				}
 			}
-			if (super.clickType == super.CTRL_DRAG && selectedId != -1 && selectedId != currentId && getScale() == 1) {
-				ActionHandler.setSelectedX(super.mouseX - (getSelected().width / 2));
-				ActionHandler.setSelectedY(super.mouseY - (getSelected().height / 2));
-			}
-			if (super.clickType != super.CTRL_DRAG && clickInRegion(posX, posX + child.width, posY, posY + child.height)) {
-				if (super.clickType == super.CTRL_RIGHT) {
+			if (clickInRegion(posX, posX + child.width, posY, posY + child.height)) {
+				if (getClickType() == ClickType.CTRL_RIGHT) {
 					selectChild(index);
 					determineMenuSize();
 					return;
 				}
-				if (super.clickType == super.CTRL_LEFT || super.clickType == super.DOUBLE) {
+				if (getClickType() == ClickType.CTRL_LEFT || getClickType() == ClickType.DOUBLE) {
 					selectChild(index);
 					return;
 				}
+			}
+			boolean test = false;
+			if (test && getClickType() == ClickType.LEFT_CLICK && clickInRegion(posX, posX + child.width, posY, posY + child.height)) {
 				if(child.actionType == 1) {
 					boolean flag = false;
 					if(child.contentType != 0) {
@@ -786,7 +831,8 @@ public class Main extends MyApplet {
 
 	public void init() {
 		main = this;
-		initClientFrame(appletWidth, appletHeight);
+		//initClientFrame(getCanvasWidth(), getCanvasHeight());
+		startRunnable(this, 1);
 	}
 
 	private void drawScrollbar(int x, int y, int height, int scrollPosition, int scrollMax, boolean isTransparent) {
@@ -872,20 +918,18 @@ public class Main extends MyApplet {
 		if (viewport != null) {
 			int width = viewport.getWidth() - (insets.left + insets.right);
 			int height = viewport.getHeight() - (insets.top + insets.bottom);
-			if (appletWidth != width) {
+			if (getCanvasWidth() != width) {
 				resized = true;
 			} else {
 				resized = false;
 			}
-			if (appletHeight != height) {
+			if (getCanvasHeight() != height) {
 				resized = true;
 			} else {
 				resized = false;
 			}
 			if (resized) {
-				appletWidth = width;
-				appletHeight = height;
-				imageProducer = new RSImageProducer(appletWidth, appletHeight, getGameComponent());
+				imageProducer = new RSImageProducer(getCanvasWidth(), getCanvasHeight(), this);
 			}
 		}
 	}
@@ -912,25 +956,29 @@ public class Main extends MyApplet {
     }
 
 	public void displayProgress(String string, int percent) {
-		int centerX = appletWidth / 2;
-		int centerY = appletHeight / 2;
+		while (strategy == null)
+		{
+			createBufferStrategy(2);
+			strategy = getBufferStrategy();
+		}
+		java.awt.Graphics2D graphics = (java.awt.Graphics2D) strategy.getDrawGraphics();
+		int centerX = getCanvasWidth() / 2;
+		int centerY = getCanvasHeight() / 2;
 		int width = 300;
 		int height = 30;
 		int alpha = 150;
 		int x = centerX - (width / 2);
 		int y = centerY - (height / 2);
 		int loaded = (width * percent) / 100;
-		if(titleArchive == null) {
-			super.displayProgress(percent, string);
-			return;
-		}
 		imageProducer.initDrawingArea();
-		RSDrawingArea.drawFilledPixels(0, 0, appletWidth, appletHeight, Constants.BACKGROUND_COLOR);
+		RSDrawingArea.drawFilledPixels(0, 0, getCanvasWidth(), getCanvasHeight(), Constants.BACKGROUND_COLOR);
 		RSDrawingArea.drawRoundedRectangle(x, y, width, height, 0, alpha / 2, true, true);
 		RSDrawingArea.drawRoundedRectangle(x, y, loaded, height, 0, alpha / 2, true, true);
 		RSDrawingArea.drawRoundedRectangle(x, y, width, height, Constants.TEXT_COLOR, alpha, false, true);
 		arial[1].drawStringCenter(string, centerX, centerY + 5, 0xFFFFFF, true);
-		imageProducer.drawGraphics(0, 0, super.graphics);
+		imageProducer.drawGraphics(0, 0, graphics);
+		graphics.dispose();
+		strategy.show();
 	}
 
 	/**
@@ -957,7 +1005,7 @@ public class Main extends MyApplet {
 		if(actionIndex < 0) {
 			return;
 		}
-		int cmd3 = menuActionCmd3[actionIndex];
+		int id = menuActionCmd3[actionIndex];
 		int action = menuActionID[actionIndex];
 		if(action >= 2000) {
 			action -= 2000;
@@ -966,7 +1014,7 @@ public class Main extends MyApplet {
 			aBoolean1149 = true;
 		}
 		if(action == 626) {
-			RSInterface rsi = RSInterface.cache[cmd3];
+			RSInterface rsi = RSInterface.cache[id];
 			String prefix = rsi.selectedActionName;
 			if(prefix.indexOf(" ") != -1) {
 				prefix = prefix.substring(0, prefix.indexOf(" "));
@@ -978,22 +1026,19 @@ public class Main extends MyApplet {
 			return;
 		}
 		if(action == 646) {
-			RSInterface class9_2 = RSInterface.cache[cmd3];
-			if(class9_2.valueIndexArray != null && class9_2.valueIndexArray[0][0] == 5) {
-				int i2 = class9_2.valueIndexArray[0][1];
-				if(variousSettings[i2] != class9_2.requiredValues[0]) {
-					variousSettings[i2] = class9_2.requiredValues[0];
+			RSInterface rsi = RSInterface.cache[id];
+			if(rsi.valueIndexArray != null && rsi.valueIndexArray[0][0] == 5) {
+				int setting = rsi.valueIndexArray[0][1];
+				if(variousSettings[setting] != rsi.requiredValues[0]) {
+					variousSettings[setting] = rsi.requiredValues[0];
 				}
 			}
 		}
-		if(action == 200) {
-			//clearTopInterfaces();
-		}
 		if(action == 169) {
-			RSInterface rsi = RSInterface.cache[cmd3];
+			RSInterface rsi = RSInterface.cache[id];
 			if(rsi.valueIndexArray != null && rsi.valueIndexArray[0][0] == 5) {
-				int l2 = rsi.valueIndexArray[0][1];
-				variousSettings[l2] = 1 - variousSettings[l2];
+				int setting = rsi.valueIndexArray[0][1];
+				variousSettings[setting] = 1 - variousSettings[setting];
 			}
 		}
 	}
@@ -1091,8 +1136,8 @@ public class Main extends MyApplet {
 										/*RSImage image = ItemDefinitions.getImage(itemId, child.inventoryAmount[item_index], color);
 										if(image != null) {
 											if(activeInterfaceType != 0 && anInt1085 == item_index && anInt1084 == child.id) {
-												offset_x = super.mouseX - anInt1087;
-												offset_y = super.mouseY - anInt1088;
+												offset_x = mouseX - anInt1087;
+												offset_y = mouseY - anInt1088;
 												if(offset_x < 5 && offset_x > -5) {
 													offset_x = 0;
 												}
@@ -1447,12 +1492,12 @@ public class Main extends MyApplet {
 		RSDrawingArea.drawRoundedRectangle(x, y, width, height, 0xffffff, 220, false, true);
 		RSDrawingArea.drawHorizontalAlphaLine(x + 1, y + 17, width - 1, 0xFFFFFF, 220);
 		arial[1].drawString("Choose Action", x + 3, y + 14, 0xFFFFFF, true);
-		int mouseX = super.mouseX - offsetX;
-		int mouseY = super.mouseY - offsetY;
+		int _mouseX = mouseX - offsetX;
+		int _mouseY = mouseY - offsetY;
 		for(int action = 0; action < childActions.length; action++) {
 			int posY = y + 31 + (childActions.length - 1 - action) * 15;
 			int color = Constants.TEXT_COLOR;
-			if(mouseX > x && mouseX < x + width && mouseY > posY - 13 && mouseY < posY + 3) {
+			if(_mouseX > x && _mouseX < x + width && _mouseY > posY - 13 && _mouseY < posY + 3) {
 				color = 0xFFFFFF;
 				RSDrawingArea.drawFilledAlphaPixels(x + 2, posY - 13, menuWidth - 4, 16, 0x9F9F9F, 220);
 			}
@@ -1471,18 +1516,18 @@ public class Main extends MyApplet {
 		width += 8;
 		int height = 15 * childActions.length + 21;
 		int startX =  0;
-		int endX = appletWidth;
+		int endX = getCanvasWidth();
 		int startY = 0;
-		int endY = appletHeight;
-		if(super.saveClickX > startX && super.saveClickY > startY && super.saveClickX < endX && super.saveClickY < endY) {
-			int x = super.saveClickX - startX - width / 2;
+		int endY = getCanvasHeight();
+		if(clickX > startX && clickY > startY && clickX < endX && clickY < endY) {
+			int x = clickX - startX - width / 2;
 			if(x + width > (endX - startX)) {
 				x = (endX - startX) - width;
 			}
 			if(x < 0) {
 				x = 0;
 			}
-			int y = super.saveClickY - startY;
+			int y = clickY - startY;
 			if(y + height > (endY - startY)) {
 				y = (endY - startY) - height;
 			}
@@ -1651,7 +1696,7 @@ public class Main extends MyApplet {
 			y1 += Main.scaledY;
 			y2 += Main.scaledY;
 		}
-		if (super.mouseX >= x1 && super.mouseX <= x2 && super.mouseY >= y1 && super.mouseY <= y2) {
+		if (mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2) {
 			return true;
 		}
 		return false;
@@ -1670,7 +1715,7 @@ public class Main extends MyApplet {
 			y1 += Main.scaledY;
 			y2 += Main.scaledY;
 		}
-		if (super.saveClickX >= x1 && super.saveClickX <= x2 && super.saveClickY >= y1 && super.saveClickY <= y2) {
+		if (clickX >= x1 && clickX <= x2 && clickY >= y1 && clickY <= y2) {
 			return true;
 		}
 		return false;
@@ -1686,9 +1731,17 @@ public class Main extends MyApplet {
 		return (zoom / 100D);
 	}
 
+	public int getCanvasWidth() {
+		return getWidth();
+	}
+
+	public int getCanvasHeight() {
+		return getHeight();
+	}
+
 	public Main() {
 		cache = new Cache();
-		imageProducer = new RSImageProducer(appletWidth, appletHeight, getGameComponent());
+		imageProducer = new RSImageProducer(765, 503, this);
 		RSDrawingArea.setAllPixelsToZero();
 		arial = new RealFont[]{ new RealFont(this, "Arial", 0, 10, true), new RealFont(this, "Arial", 0, 12, true), new RealFont(this, "Arial", 0, 14, true) };
 		arialColor = 0xD8D8D8;;
@@ -1708,6 +1761,12 @@ public class Main extends MyApplet {
 		scaledY = 0;
 	}
 
+	public static int verticalPos;
+	public static int horizontalPos;
+	public int selectionX = -1;
+	public int selectionY = -1;
+	public int selectionWidth = 0;
+	public int selectionHeight = 0;
 	public MediaArchive mediaArchive;
 	public static Cache cache;
 	public int zoom;
@@ -1715,15 +1774,13 @@ public class Main extends MyApplet {
 	public static int scaledY;
 	public static Archive media;
 	public static Archive interfaces;
-	public static int appletWidth = 765;
-	public static int appletHeight = 503;
 	public RealFont[] arial;
 	public int arialColor;
 	public static int currentId = -1;
 	public static int selectedId = -1;
 	public static int hoverId = -1;
-	public static int selectedX = -1;
-	public static int selectedY = -1;
+	public int[] alpha = { 0, 0, 0, 0 };
+
 	private boolean menuOpen;
 	private final int scrollLight;
 	private final int scrollDark;
@@ -1756,5 +1813,233 @@ public class Main extends MyApplet {
     public int anInt1315;
     public int anInt1500;
     public int anInt1501;
+
+	public void run() {
+		MyMouseListener mouseListener = new MyMouseListener(getInstance());
+		addMouseListener(mouseListener);
+		addMouseMotionListener(mouseListener);
+		addMouseWheelListener(mouseListener);
+		addKeyListener(new MyKeyListener());
+		addFocusListener(this);
+		displayProgress("Loading...", 0);
+		initialize();
+		int opos = 0;
+		int ratio = 256;
+		int delay = 1;
+		int count = 0;
+		int intex = 0;
+		for(int index = 0; index < 10; index++) {
+			times[index] = System.currentTimeMillis();
+		}
+		do {
+			if(timeRunning < 0) {
+				break;
+			}
+			if(timeRunning > 0) {
+				timeRunning--;
+				if(timeRunning == 0) {
+					exit();
+					return;
+				}
+			}
+			int k1 = ratio;
+			int i2 = delay;
+			ratio = 300;
+			delay = 1;
+			long systemTime = System.currentTimeMillis();
+			if(times[opos] == 0L) {
+				ratio = k1;
+				delay = i2;
+			} else if(systemTime > times[opos]) {
+				ratio = (int)((long)(2560 * delayTime) / (systemTime - times[opos]));
+			}
+			if(ratio < 25) {
+				ratio = 25;
+			}
+			if(ratio > 256) {
+				ratio = 256;
+				delay = (int)((long)delayTime - (systemTime - times[opos]) / 10L);
+			}
+			if(delay > delayTime) {
+				delay = delayTime;
+			}
+			times[opos] = systemTime;
+			opos = (opos + 1) % 10;
+			if(delay > 1) {
+				for(int index = 0; index < 10; index++) {
+					if(times[index] != 0L) {
+						times[index] += delay;
+					}
+				}
+			}
+			if(delay < minDelay) {
+				delay = minDelay;
+			}
+			try {
+				Thread.sleep(delay);
+			} catch(InterruptedException e) {
+				intex++;
+			}
+			for(; count < 256; count += ratio) {
+				aLong29 = clickTime;
+				process();
+			}
+			count &= 0xff;
+			if(delayTime > 0) {
+				fps = (1000 * ratio) / (delayTime * 256);
+			}
+			processDrawing();
+			if(shouldDebug) {
+				System.out.println("ntime:" + systemTime);
+				for(int index = 0; index < 10; index++) {
+					int otim = ((opos - index - 1) + 20) % 10;
+					System.out.println("otim" + otim + ":" + times[otim]);
+				}
+				System.out.println("fps:" + fps + " ratio:" + ratio + " count:" + count);
+				System.out.println("del:" + delay + " deltime:" + delayTime + " mindel:" + minDelay);
+				System.out.println("intex:" + intex + " opos:" + opos);
+				shouldDebug = false;
+				intex = 0;
+			}
+		} while(true);
+		if(timeRunning == -1) {
+			exit();
+		}
+	}
+
+	private void exit() {
+		timeRunning = -2;
+		cleanUpForQuit();
+	}
+
+	public void startRunnable(Runnable runnable, int priority) {
+		Thread thread = new Thread(runnable);
+		thread.start();
+		thread.setPriority(priority);
+	}
+
+	final void setDelayTime(int time) {
+		delayTime = 1000 / time;
+	}
+
+	public final void start() {
+		if(timeRunning >= 0) {
+			timeRunning = 0;
+		}
+	}
+
+	public final void stop() {
+		if(timeRunning >= 0) {
+			timeRunning = 4000 / delayTime;
+		}
+	}
+
+	public final void destroy() {
+		timeRunning = -1;
+		try {
+			Thread.sleep(5000L);
+		} catch(Exception e) {
+		}
+		if(timeRunning == -1) {
+			exit();
+		}
+	}
+
+	public void updateMouse(int mouseX, int mouseY, int clickX, int clickY, int idleTime, long clickTime, ClickType clickType) {
+		this.mouseX = mouseX;
+		this.mouseY = mouseY;
+		this.clickX = clickX;
+		this.clickY = clickY;
+		this.idleTime = idleTime;
+		this.clickTime = clickTime;
+		this.clickType = clickType;
+	}
+
+	public ClickType clickType;
+
+	public ClickType getClickType() {
+		return clickType;
+	}
+
+	public int idleTime;
+	public int mouseX;
+	public int mouseY;
+	public int clickX;
+	public int clickY;
+	public long clickTime;
+
+	public String titleText = "";
+	public static int hotKey = 508;
+	private int timeRunning;
+	private int delayTime;
+	int minDelay;
+	private final long times[] = new long[10];
+	int fps;
+	boolean shouldDebug;
+	int myWidth;
+	int myHeight;
+	public Insets insets = new Insets(30, 5, 5, 5);
+	public boolean isApplet;
+	boolean awtFocus;
+	long aLong29;
+	protected final int keyArray[] = new int[128];
+	protected final int charQueue[] = new int[128];
+	protected int writeIndex;
+	public static int anInt34;
+	private BufferStrategy strategy;
+
+	@Override
+	public void windowActivated(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosed(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowClosing(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowDeactivated(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowDeiconified(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowIconified(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void windowOpened(WindowEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void focusGained(FocusEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void focusLost(FocusEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
 
 }

@@ -2,7 +2,6 @@ package rs2.graphics;
 
 import java.awt.Component;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.Shape;
@@ -28,31 +27,20 @@ public final class RSImageProducer {
 		initDrawingArea();
 	}
 
-    private BufferedImage getBufferedImage(Image image) {
-        BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = bufferedImage.createGraphics();
-        g2.drawImage(image, 0, 0, null);
-        g2.dispose();
-        return bufferedImage;
-    }
-
-	public void drawGraphics(int x, int y, Graphics gfx) {
+    public void drawGraphics(int x, int y, Graphics gfx) {
 		draw(x, y, gfx);
 	}
 
 	public void draw(int x, int y, Graphics gfx) {
 		x += Main.scaledX;
 		y += Main.scaledY;
-		if (Main.getInstance().getScale() != 1) {
-			int type = Image.SCALE_DEFAULT;
-			scaled = getBufferedImage(image.getScaledInstance((int) (image.getWidth() * Main.getInstance().getScale()), (int) (image.getHeight() * Main.getInstance().getScale()), type));
-			if (scaled != null) {
-				scaledWidth = scaled.getWidth();
-				scaledHeight = scaled.getHeight();
-				gfx.drawImage(scaled, x, y, component);
-			}
+		
+		double scale = Main.getInstance().getScale();
+		if (scale != 1) {
+			BufferedImage scaled = getBufferedImage(image.getScaledInstance((int) (width * scale), (int) (height * scale), Image.SCALE_DEFAULT));
+			gfx.drawImage(scaled, x, y, scaled.getWidth(), scaled.getHeight(), component);
 		} else {
-			gfx.drawImage(image, x, y, component);
+			gfx.drawImage(image, x, y, image.getWidth(), image.getHeight(), component);
 		}
 	}
 
@@ -74,13 +62,19 @@ public final class RSImageProducer {
 		RSDrawingArea.initDrawingArea(width, height, pixels);
 	}
 
+    private BufferedImage getBufferedImage(Image image) {
+        BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+        Graphics g = bufferedImage.createGraphics();
+        g.drawImage(image, 0, 0, null);
+        g.dispose();
+        return bufferedImage;
+    }
+
 	public final int[] pixels;
 	public final int width;
 	public final int height;
 	public final BufferedImage image;
 	public BufferedImage scaled;
-	public int scaledWidth = Main.appletWidth;
-	public int scaledHeight = Main.appletHeight;
 	public final Component component;
 	private final Rectangle clip = new Rectangle();
 	private static final ColorModel COLOR_MODEL = new DirectColorModel(32, 0xff0000, 0xff00, 0xff);

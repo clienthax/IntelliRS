@@ -89,7 +89,7 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 			viewport.setLayout(new BorderLayout());
 			viewport.add(this);
 			viewport.setVisible(true);
-			viewport.setSize(appletWidth + 9, appletHeight + 33);
+			viewport.setSize(765 + 8, 503 + 34);
 			viewport.setResizable(true);
 			desktop.add(viewport);
 			frame.getContentPane().add(desktop, BorderLayout.CENTER);

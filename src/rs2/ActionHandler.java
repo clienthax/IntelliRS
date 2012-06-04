@@ -129,7 +129,7 @@ public class ActionHandler {
 		}
 		switch (rsi.type) {
 			case 0:
-				Main.selectInterface(rsi.id);
+				Main.getInstance().selectInterface(rsi.id);
 				break;
 			case 4:
 				//setText(rsi, JOptionPane.showInputDialog(null, "Enter new text:", rsi.disabledText));
