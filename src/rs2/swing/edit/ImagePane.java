@@ -21,7 +21,7 @@ import javax.swing.border.TitledBorder;
 
 import rs2.ActionHandler;
 import rs2.Main;
-import rs2.RSInterface;
+import rs2.editor.RSInterface;
 import rs2.graphics.RSImage;
 
 @SuppressWarnings("serial")

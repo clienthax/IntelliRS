@@ -3,6 +3,7 @@ package rs2.cache;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -32,11 +33,12 @@ public class Cache {
 			}
 			indices = new ArrayList<ResourceCache>();
 			RandomAccessFile data = new RandomAccessFile(dataFile, "rw");
-			for (int i = 0; i < indexFiles.length; i++) {
-				ResourceCache indice = new ResourceCache(data, new RandomAccessFile(indexFiles[i], "rw"), i + 1);
+			for (int index = 0; index < indexFiles.length; index++) {
+				ResourceCache indice = new ResourceCache(data, new RandomAccessFile(indexFiles[index], "rw"), index + 1);
 				indices.add(indice);
 			}
-			System.out.println("Read cache files.");
+			DecimalFormat format = new DecimalFormat("#,###"); 
+			System.out.println("[Cache]: " + "Read successfully (data size: " + format.format(data.length()) + " bytes, indices: " + indices.size() + ").");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -46,7 +48,7 @@ public class Cache {
 	 * Rebuilds the cache.
 	 * @throws IOException
 	 */
-	public void rebuildCache() throws IOException {
+	public void rebuildCache() {
 		ResourceCache index;
 		int currentFile;
 		for (int i = 0; i < indexFiles.length; i++) {

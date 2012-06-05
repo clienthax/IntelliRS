@@ -146,12 +146,12 @@ public class RSDrawingArea extends NodeSub {
 		drawVerticalLine((x + width) - 1, y, height, color);
 	}
 
-	public static void method338(int i, int j, int k, int l, int i1, int j1) {
-		drawHorizontalAlphaLine(j1, i, i1, l, k);
-		drawHorizontalAlphaLine(j1, (i + j) - 1, i1, l, k);
-		if (j >= 3) {
-			drawVerticalAlphaLine(j1, i + 1, j - 2, l, k);
-			drawVerticalAlphaLine((j1 + i1) - 1, i + 1, j - 2, l, k);
+	public static void drawUnfilledAlphaPixels(int x, int y, int width, int height, int color, int alpha) {
+		drawHorizontalAlphaLine(x, y, width, color, alpha);
+		drawHorizontalAlphaLine(x, (y + height) - 1, width, color, alpha);
+		if (height >= 3) {
+			drawVerticalAlphaLine(x, y + 1, height - 2, color, alpha);
+			drawVerticalAlphaLine((x + width) - 1, y + 1, height - 2, color, alpha);
 		}
 	}
 

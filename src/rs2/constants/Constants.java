@@ -33,6 +33,12 @@ public class Constants {
 	public static final String SETTINGS_FILE_NAME = "settings.gcl";
 
 	/**
+	 * The maximum memory usage the program can consume.
+	 * Most clients should consume no more than 130,000,000 to 230,000,00.
+	 */
+	public static final long MEMORY_LIMIT = 300000000L;
+
+	/**
 	 * Returns the cache directory.
 	 */
 	public static final String getCacheDirectory() {

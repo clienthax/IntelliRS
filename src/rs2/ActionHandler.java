@@ -1,5 +1,6 @@
 package rs2;
 
+import rs2.editor.RSInterface;
 import rs2.graphics.RSImage;
 import rs2.swing.UserInterface;
 import rs2.swing.edit.ImagePane;
@@ -151,6 +152,14 @@ public class ActionHandler {
 			rsi.width = rsi.enabledSprite.myWidth;
 			rsi.height = rsi.enabledSprite.myHeight;
 		}
+	}
+
+	public static void lockSelectedChildren(boolean lock) {
+		RSInterface[] children = Main.getInstance().getSelectedChildren();
+		for (RSInterface child : children) {
+			child.locked = lock;
+		}
+		Main.selectionLocked = lock;
 	}
 
 }

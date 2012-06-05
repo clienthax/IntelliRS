@@ -42,7 +42,7 @@ final class BZip2Block {
 	final int[] unzftabEntries;
 	int anInt584;
 	final int[] anIntArray585;
-	public static int buffer[];
+	public static volatile int buffer[];
 	int numSymbolsUsed;
 	final boolean[] symbolBitmap;
 	final boolean[] byteBitmap;

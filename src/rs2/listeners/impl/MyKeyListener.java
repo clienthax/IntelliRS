@@ -5,7 +5,7 @@ import java.awt.event.KeyListener;
 
 import rs2.ActionHandler;
 import rs2.Main;
-import rs2.RSInterface;
+import rs2.editor.RSInterface;
 
 public class MyKeyListener implements KeyListener {
 
@@ -28,7 +28,7 @@ public class MyKeyListener implements KeyListener {
 				}
 				break;
 			case KeyEvent.VK_TAB:
-				Main.tab();
+				Main.selectNextChild();
 				break;
 			case KeyEvent.VK_LEFT:
 				ActionHandler.moveSelectedX(-1);

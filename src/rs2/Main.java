@@ -1,27 +1,19 @@
 package rs2;
+
 import java.awt.Canvas;
-import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
-import java.awt.Toolkit;
+import java.awt.Rectangle;
 import java.awt.image.BufferStrategy;
-import java.awt.image.BufferedImage;
-import java.awt.image.FilteredImageSource;
-import java.awt.image.ImageProducer;
-import java.awt.image.RGBImageFilter;
-import java.io.File;
-
-import javax.imageio.ImageIO;
-import javax.swing.JInternalFrame;
 
 import rs2.cache.Archive;
 import rs2.cache.Cache;
 import rs2.cache.media.MediaArchive;
 import rs2.constants.Constants;
+import rs2.editor.InputListener;
+import rs2.editor.ViewportRenderer;
+import rs2.editor.RSInterface;
 import rs2.graphics.RSDrawingArea;
 import rs2.graphics.RSFont;
 import rs2.graphics.RSImage;
@@ -52,17 +44,16 @@ public class Main extends Canvas implements Runnable {
 	 * @return
 	 */
 	public FontMetrics getMetrics(Font font) {
-		FontMetrics metrics = null;
-		if (font != null) {
-			metrics = getFontMetrics(font);
+		if (font == null) {
+			return null;
 		}
-		return metrics;
+		return getFontMetrics(font);
 	}
 
 	/**
 	 * Sets the next child as the selected interface.
 	 */
-	public static void tab() {
+	public static void selectNextChild() {
 		RSInterface rsi = getInterface();
 		if (rsi.children != null) {
 			if (getSelectedIndex() + 1 < rsi.children.length) {
@@ -191,7 +182,7 @@ public class Main extends Canvas implements Runnable {
 	 * @return
 	 */
 	public static int getX(RSInterface parent, RSInterface child) {
-		if (parent == null || parent.children == null) {
+		if (parent == null || parent.children == null || child == null) {
 			return -1;
 		}
 		for (int index = 0; index < parent.children.length; index++) {
@@ -209,7 +200,7 @@ public class Main extends Canvas implements Runnable {
 	 * @return
 	 */
 	public static int getY(RSInterface parent, RSInterface child) {
-		if (parent == null || parent.children == null) {
+		if (parent == null || parent.children == null || child == null) {
 			return -1;
 		}
 		for (int index = 0; index < parent.children.length; index++) {
@@ -246,7 +237,7 @@ public class Main extends Canvas implements Runnable {
 		horizontalPos = getCanvasWidth() / 2;
 		verticalScale = 10;
 		horizontalScale = 10;
-		UserInterface.ui.buildTreePane();
+		getUI().buildTreePane();
 	}
 
 	/**
@@ -263,106 +254,6 @@ public class Main extends Canvas implements Runnable {
 	 */
 	public int getSliderHeight() {
 		return getCanvasHeight() / 5;
-	}
-
-	/**
-	 * Draws the grid sliders.
-	 */
-	public void drawSliders() {
-		if (!Settings.displayGrid) {
-			return;
-		}
-		int background = 0x151515;
-		int bar = 0x666666;
-		int thickness = 8;
-		int start = 150;
-		if (mouseInRegion(0, getCanvasWidth() - thickness, getCanvasHeight() - thickness, getCanvasHeight())) {
-			if (alpha[2] < 50) {
-				alpha[2] += 5;
-			}
-		} else {
-			if (alpha[2] > 0) {
-				alpha[2] -= 5;
-			}
-		}
-		if (mouseInRegion(getCanvasWidth() - thickness, getCanvasWidth(), 0, getCanvasHeight() - thickness)) {
-			if (alpha[3] < 50) {
-				alpha[3] += 5;
-			}
-		} else {
-			if (alpha[3] > 0) {
-				alpha[3] -= 5;
-			}
-		}
-		RSDrawingArea.drawRoundedRectangle(0, getCanvasHeight() - thickness, getCanvasWidth() - thickness, thickness, background, start + alpha[2], true, false);
-		RSDrawingArea.drawRoundedRectangle(getCanvasWidth() - thickness, 0, thickness, getCanvasHeight() - thickness, background, start + alpha[3], true, false);
-		RSDrawingArea.drawRoundedRectangle(horizontalPos - (getSliderWidth() / 2), getCanvasHeight() - thickness, getSliderWidth(), thickness, bar, start + (alpha[2] * 2), true, false);
-		RSDrawingArea.drawRoundedRectangle(getCanvasWidth() - thickness, verticalPos - (getSliderHeight() / 2), thickness, getSliderHeight(), bar, start + (alpha[3] * 2), true, false);
-	}
-
-	public static int horizontalScale = 10;
-	public static int verticalScale = 10;
-
-	/**
-	 * Displays the grid.
-	 */
-	public void drawGrid(Graphics g) {
-		if (!Settings.displayGrid) {
-			return;
-		}
-		g.setColor(new Color(255, 255, 255, 15));
-		int width = getCanvasWidth();
-		int height = getCanvasHeight();
-		int horizontalCount = width / (horizontalScale != 0 ? horizontalScale : 1);
-		int verticalCount = height / (verticalScale != 0 ? verticalScale : 1);
-		for (int index = 0, x = 0; index < horizontalCount + 1; index++, x += horizontalScale) {
-			g.drawLine(x, 0, x, height);
-		}
-		for (int index = 0, y = 0; index < verticalCount + 1; index++, y += verticalScale) {
-			g.drawLine(0, y, width, y);
-		}
-	}
-
-	/**
-	 * Draws the data pane.
-	 */
-	public void drawDataPane() {
-		String[] names = { "currentId:", "selectedId:", "selectedX:", "selectedY:", "locked:", "hoverId:" };
-		Object[] values = { currentId, selectedId, getSelectedX(), getSelectedY(), getSelected() != null ? getSelected().locked : false, hoverId };
-		int width = 80;
-		int height = (names.length * 12) + 2;
-		int alpha = 100;
-		int x = 5;
-		int y = getCanvasHeight() - (height + 5);
-		for (int index = 0; index < names.length; index++) {
-			if (small.getTextWidth(names[index] + " " + values[index]) > width) {
-				width = small.getTextWidth(names[index] + " " + values[index]);
-			}
-		}
-		width += 5;
-		RSDrawingArea.drawRoundedRectangle(x, y, width, height, 0, alpha, true, true);
-		RSDrawingArea.drawRoundedRectangle(x, y, width, height, 0xFFFFFF, alpha + 50, false, true);
-		for (int index = 0; index < names.length; index++, y += 11) {
-			arial[0].drawString(names[index] + " " + values[index], x + 5, y + 12, arialColor, true);
-		}
-	}
-
-	/**
-	 * Displays the children on the interface that are locked.
-	 */
-	public void showLockedChildren() {
-		if (getInterface() == null || getInterface().children == null) {
-			return;
-		}
-		for (int index = 0; index < getInterface().children.length; index++) {
-			RSInterface child = getInterface(getInterface().children[index]);
-			if (child.locked) {
-				RSDrawingArea.drawFilledAlphaPixels(getX(getInterface(), child), getY(getInterface(), child), child.width, child.height, 0, 150);
-				RSDrawingArea.drawUnfilledPixels(getX(getInterface(), child), getY(getInterface(), child), child.width, child.height, 0);
-				RSImage lock = new RSImage("lock.png");
-				lock.drawCenteredARGBImage(getX(getInterface(), child) + (child.width / 2), getY(getInterface(), child) + (child.height / 2));
-			}
-		}
 	}
 
 	/**
@@ -398,105 +289,64 @@ public class Main extends Canvas implements Runnable {
 		selectionY = -1;
 		selectionWidth = 0;
 		selectionHeight = 0;
+		selectionLocked = false;
+		movingSelection = false;
 	}
 
 	/**
-	 * Draws the multiple selection area.
+	 * Returns an RSInterface array of the selected children.
+	 * @return
 	 */
-	public void drawSelection() {
-		if (multipleSelected()) {
-			if (selectionWidth < 0) {
-				selectionWidth *= -1;
-				selectionX -= selectionWidth;
+	public RSInterface[] getSelectedChildren() {
+		RSInterface parent = getInterface();
+		RSInterface[] children = new RSInterface[parent.children.length];
+		int count = 0;
+		for (int index = 0; index < children.length; index++) {
+			RSInterface child = getInterface(parent.children[index]);
+			int childX = getX(parent, child);
+			int childY = getY(parent, child);
+			int childWidth = child.width;
+			int childHeight = child.height;
+			if (inArea(getSelectionArea(), new Rectangle(childX, childY, childWidth, childHeight))) {
+				children[count] = child;
+				count++;
 			}
-			if (selectionHeight < 0) {
-				selectionHeight *= -1;
-				selectionY -= selectionHeight;
-			}
-			RSDrawingArea.drawUnfilledPixels(selectionX, selectionY, selectionWidth, selectionHeight, 0x00FFFF);
-			RSDrawingArea.drawFilledAlphaPixels(selectionX, selectionY, selectionWidth, selectionHeight, 0x00FFFF, 125);
 		}
+		RSInterface[] _children = new RSInterface[count];
+		for (int index = 0; index < count; index++) {
+			_children[index] = children[index];
+		}
+		return _children;
 	}
 
 	/**
-	 * Displays the interface.
+	 * Gets the selection area as a rectange.
+	 * @return
 	 */
-	private void displayInterfacePane() {
-		RSDrawingArea.drawFilledAlphaPixels(0, 0, getCanvasWidth(), getCanvasHeight(), Constants.BACKGROUND_COLOR, 256);
-		if (currentId != -1 && getInterface() != null) {
-			drawInterface(getInterface(), 0, 0, 0);
-			if (hoverId != -1 && Settings.displayHover) {
-				RSDrawingArea.drawFilledAlphaPixels(getX(getInterface(), getHovered()), getY(getInterface(), getHovered()), getHovered().width, getHovered().height, 0xffffff, 50);
-				RSDrawingArea.drawUnfilledPixels(getX(getInterface(), getHovered()), getY(getInterface(), getHovered()), getHovered().width, getHovered().height, 0xffffff);
-			}
-			if (selectedId != -1) {
-				childActions = new String[]{ "Remove", "Move down", "Move up", "Move to back", "Move to front", getSelected().locked ? "Unlock" : "Lock", "Edit" };
-				int x = -1;
-				int y = -1;
-				RSInterface child = null;
-				if (getInterface().children != null) {
-					for (int index = 0; index < getInterface().children.length; index++) {
-						if (getInterface().children[index] == selectedId) {
-							x = getInterface().childX[index];
-							y = getInterface().childY[index];
-							child = RSInterface.cache[getInterface().children[index]];
-							break;
-						} else {
-							if (RSInterface.cache[getInterface().children[index]].children != null) {
-								child = RSInterface.cache[getInterface().children[index]];
-								for (int childIndex = 0; childIndex < child.children.length; childIndex++) {
-									if (child.children[childIndex] == selectedId) {
-										x = getInterface().childX[index] + child.childX[childIndex];
-										y = getInterface().childY[index] + child.childY[childIndex];
-										child = RSInterface.cache[child.children[childIndex]];
-										break;
-									}
-								}
-							}
-						}
-					}
-				}
-				if (child != null) {
-					int color = 0xff00ff;
-					int alpha = 50;
-					RSDrawingArea.drawFilledAlphaPixels(x, y, child.width, child.height, color, alpha);
-					RSDrawingArea.drawUnfilledPixels(x, y, child.width, child.height, color);
-				}
-			}
-		}
-		showLockedChildren();
-		drawSelection();
-		if (currentId != -1 && getInterface() != null) {
-			drawSliders();
-			if (menuOpen) {
-				drawMenu(0, 0);
-			}
-		}
-		if (Settings.displayData) {
-			drawDataPane();
-		}
-		Graphics2D graphics = (Graphics2D) strategy.getDrawGraphics();
-		imageProducer.drawGraphics(0, 0, graphics);
-		drawGrid(graphics);
-		debugMouse(graphics);
-		graphics.dispose();
-		strategy.show();
+	public Rectangle getSelectionArea() {
+		return new Rectangle(selectionX, selectionY, selectionWidth, selectionHeight);
 	}
 
 	/**
-	 * Displays the mouse location and mouse information.
-	 * @param g
+	 * Returns the selected child's area as a rectange.
+	 * @return
 	 */
-	public void debugMouse(Graphics g) {
-		if (Constants.DEBUG_MOUSE) {
-			if (mouseX != -1 && mouseY != -1) {
-				g.setColor(new Color(0, 255, 255));
-				int x = mouseX;
-				int y = mouseY;
-				g.drawLine(x, 0, x, getCanvasHeight());
-				g.drawLine(0, y, getCanvasWidth(), y);
-			}
+	public Rectangle getSelectedArea() {
+		return new Rectangle(getSelectedX(), getSelectedY(), getSelected().width, getSelected().height);
+	}
+
+	/**
+	 * Checks to see if the specified rectangle is within a region.
+	 * @param in
+	 * @param area
+	 * @return
+	 */
+	public boolean inArea(Rectangle in, Rectangle area) {
+		if (area.getX() >= in.getX() && area.getX() + area.getWidth() <= in.getX() + in.getWidth()
+		&& area.getY() >= in.getY() && area.getY() + area.getHeight() <= in.getY() + in.getHeight()) {
+			return true;
 		}
+		return false;
 	}
 
 	/**
@@ -570,101 +420,17 @@ public class Main extends Canvas implements Runnable {
 		}
 		adjustingGrid = true;
 	}
-	boolean adjustingGrid = false;
-	public int sliderThickness = 8;
 
-	/**
-	 * Processes mouse input for the interface editor.
-	 */
-	public void processInput() {
-		if (getInterface() != null) {
-			/* Interface children clicking */
-			if (!menuOpen) {
-				processChildClicking();
-			}
-			/* Grid adjustment */
-			if (clickInRegion(0, getCanvasWidth() - sliderThickness, getCanvasHeight() - sliderThickness, getCanvasHeight())) {
-				if (Settings.displayGrid) {
-					if (getClickType() == ClickType.LEFT_CLICK || getClickType() == ClickType.LEFT_DRAG) {
-						adjustHorizontal(mouseX);
-					}
-				}
-			} else if (clickInRegion(getCanvasWidth() - sliderThickness, getCanvasWidth(), 0, getCanvasHeight() - sliderThickness)) {
-				if (Settings.displayGrid) {
-					if (getClickType() == ClickType.LEFT_CLICK || getClickType() == ClickType.LEFT_DRAG) {
-						adjustVertical(mouseY);
-					}
-				}
-			} else {
-				adjustingGrid = false;
-			}
-			if (!adjustingGrid) {
-				/* Selection rectangle dragging */
-				if (getClickType() == ClickType.LEFT_DRAG) {
-					selectionX = clickX;
-					selectionY = clickY;
-					int[] distances = calculateDragDistance();
-					selectionWidth = distances[0];
-					selectionHeight = distances[1];
-				}
-			}
-			/* Right clicking menus and actions */
-			if (multipleSelected()) {
-				if (getClickType() == ClickType.RIGHT_CLICK && clickInRegion(selectionX, selectionX + selectionWidth, selectionY, selectionY + selectionHeight)) {
-					menuActions = 1;
-					determineMenuSize();
-				}
-				if (menuOpen) {
-					if (getClickType() == ClickType.LEFT_CLICK) {
-						int _clickX = clickX;
-						int _clickY = clickY ;
-						for(int action = 0; action < getActions().length; action++) {
-							int posY = menuOffsetY + 31 + (getActions().length - 1 - action) * 15;
-							if(_clickX > menuOffsetX && _clickX < menuOffsetX + menuWidth && _clickY > posY - 13 && _clickY < posY + 3) {
-								actionIndex = action;
-								perform(actionIndex);
-							}
-						}
-					}
-				}
-			}
-			if (getSelected() != null) {
-				if (getClickType() == ClickType.RIGHT_CLICK && clickInRegion(getSelectedX(), getSelectedX() + getSelected().width, getSelectedY(), getSelectedY() + getSelected().height)) {
-					menuActions = 0;
-					determineMenuSize();
-				}
-				if (menuOpen) {
-					if (getClickType() == ClickType.LEFT_CLICK) {
-						int _clickX = clickX;
-						int _clickY = clickY ;
-						for(int action = 0; action < getActions().length; action++) {
-							int posY = menuOffsetY + 31 + (getActions().length - 1 - action) * 15;
-							if(_clickX > menuOffsetX && _clickX < menuOffsetX + menuWidth && _clickY > posY - 13 && _clickY < posY + 3) {
-								actionIndex = action;
-								perform(actionIndex);
-							}
-						}
-					}
-				}
-			}
-			/* Close menu when mouse leaves menu area */
-			if (!mouseInRegion(menuOffsetX, menuOffsetX + menuWidth, menuOffsetY, menuOffsetY + menuHeight)) {
-				menuOpen = false;
-				actionIndex = -1;
-			}
-		}
-	}
-
-	private String[] childActions = { "Remove", "Move down", "Move up", "Move to back", "Move to front", "Lock", "Edit" };
+	public String[] childActions = { "Remove", "Move down", "Move up", "Move to back", "Move to front", "Lock", "Edit" };
 	private String[] selectionActions = { "Remove", "Move", "Lock", "Unselect" };
 
 	public String[] getActions() {
 		String[][] actions = { childActions, selectionActions };
+		if (menuActions == 1) {
+			selectionActions[2] = selectionLocked ? "Unlock" : "Lock";
+		}
 		return actions[menuActions];
 	}
-
-	public int menuActions = 0;
-	public int actionIndex = -1;
 
 	public void perform(int action) {
 		menuOpen = false;
@@ -692,7 +458,7 @@ public class Main extends Canvas implements Runnable {
 						} else {
 							ActionHandler.lock();
 						}
-						UserInterface.ui.rebuildTreeList();
+						getUI().rebuildTreeList();
 						break;
 					case 6:
 						ActionHandler.edit(getSelected());
@@ -701,292 +467,76 @@ public class Main extends Canvas implements Runnable {
 				break;
 			case 1:
 				switch (action) {
-					case 3:
-						resetSelection();
-						break;
+				case 1:
+					movingSelection = !movingSelection;
+					break;
+				case 2:
+					ActionHandler.lockSelectedChildren(selectionActions[2].equalsIgnoreCase("lock") ? true : false);
+					break;
+				case 3:
+					resetSelection();
+					break;
 				}
 				break;
 		}
 	}
 
-	public void processChildClicking() {
-		RSInterface rsi = getInterface();
-		int offsetY = 0;
-		int _mouseX = mouseX;
-		int _mouseY = mouseY;
-		int _clickX = clickX;
-		int _clickY = clickY;
-		if (rsi.type != 0 || rsi.children == null || rsi.showInterface) {
-			return;
+	/**
+	 * Handles the "glowing" alpha values.
+	 * @param index
+	 */
+	public void glow(int index) {
+		if (alpha[index] < maximum[index] && increasing[index]) {
+			alpha[index] += rate[index];
 		}
-		if (_mouseX < 0 || _mouseY < 0 || _mouseX > 0 + rsi.width || _mouseY > 0 + rsi.height) {
-			return;
+		if (alpha[index] > maximum[index]) {
+			alpha[index] = maximum[index];
 		}
-		if (_clickX < 0 || _clickY < 0 || _clickX > 0 + rsi.width || _clickY > 0 + rsi.height) {
-			//return;
+		if (alpha[index] == maximum[index]) {
+			increasing[index] = false;
 		}
-		hoverId = -1;
-		int childCount = rsi.children.length;
-		for(int index = 0; index < childCount; index++) {
-			int posX = rsi.childX[index];
-			int posY = rsi.childY[index] - offsetY;
-			RSInterface child = RSInterface.cache[rsi.children[index]];
-			posX += child.drawOffsetX;
-			posY += child.drawOffsetY;
-			if (mouseInRegion(posX, posX + child.width, posY, posY + child.height)) {
-				hoverId = child.id;
-				if (getClickType() == ClickType.CTRL_DRAG && selectedId != -1 && selectedId != currentId && getScale() == 1) {
-					ActionHandler.setSelectedX(_mouseX - (getSelected().width / 2));
-					ActionHandler.setSelectedY(_mouseY - (getSelected().height / 2));
-					return;
-				}
-			}
-			if (clickInRegion(posX, posX + child.width, posY, posY + child.height)) {
-				if (getClickType() == ClickType.CTRL_RIGHT) {
-					selectChild(index);
-					determineMenuSize();
-					return;
-				}
-				if (getClickType() == ClickType.CTRL_LEFT || getClickType() == ClickType.DOUBLE) {
-					selectChild(index);
-					return;
-				}
-			}
-			boolean test = false;
-			if (test && getClickType() == ClickType.LEFT_CLICK && clickInRegion(posX, posX + child.width, posY, posY + child.height)) {
-				if(child.actionType == 1) {
-					boolean flag = false;
-					if(child.contentType != 0) {
-						//TODO: Content type.
-					}
-					if(!flag) {
-						menuActionName[menuActionRow] = child.tooltip;
-						menuActionID[menuActionRow] = 315;
-						menuActionCmd3[menuActionRow] = child.id;
-						menuActionRow++;
-					}
-				}
-				if(child.actionType == 2) {
-					String name = child.selectedActionName;
-					if(name.indexOf(" ") != -1) {
-						name = name.substring(0, name.indexOf(" "));
-					}
-					if (menuActionRow < menuActionName.length) {
-						menuActionName[menuActionRow] = name + " @gre@" + child.spellName;
-						menuActionID[menuActionRow] = 626;
-						menuActionCmd3[menuActionRow] = child.id;
-						menuActionRow++;
-					}
-				}
-				if(child.actionType == 3) {
-					if (menuActionRow < menuActionName.length) {
-						menuActionName[menuActionRow] = "Close";
-						menuActionID[menuActionRow] = 200;
-						menuActionCmd3[menuActionRow] = child.id;
-						menuActionRow++;
-					}
-				}
-				if(child.actionType == 4) {
-					if (menuActionRow < menuActionName.length) {
-						menuActionName[menuActionRow] = child.tooltip;
-						menuActionID[menuActionRow] = 169;
-						menuActionCmd3[menuActionRow] = child.id;
-						menuActionRow++;
-					}
-				}
-				if(child.actionType == 5) {
-					if (menuActionRow < menuActionName.length) {
-						menuActionName[menuActionRow] = child.tooltip;
-						menuActionID[menuActionRow] = 646;
-						menuActionCmd3[menuActionRow] = child.id;
-						menuActionRow++;
-					}
-				}
-				if(child.actionType == 6 && !aBoolean1149) {
-					if (menuActionRow < menuActionName.length) {
-						menuActionName[menuActionRow] = child.tooltip;
-						menuActionID[menuActionRow] = 679;
-						menuActionCmd3[menuActionRow] = child.id;
-						menuActionRow++;
-					}
-				}
-				doAction(menuActionRow - 1);
-			}
+		if (alpha[index] > minimum[index] && !increasing[index]) {
+			alpha[index] -= rate[index];
+		}
+		if (alpha[index] <= minimum[index]) {
+			increasing[index] = true;
+			alpha[index] = minimum[index];
 		}
 	}
 
 	/**
-	 * Dumps a sprite with the specified name.
-	 * @param id
-	 * @param image
+	 * Draws a scrollbar.
+	 * @param x
+	 * @param y
+	 * @param height
+	 * @param scrollPosition
+	 * @param scrollMax
 	 */
-	public void dumpImage(RSImage image, String name) {
-		File directory = new File(Constants.getCacheDirectory() + "rsimg/dump/");
-		if (!directory.exists()) {
-			directory.mkdir();
-		}
-		BufferedImage bi = new BufferedImage(image.myWidth, image.myHeight, BufferedImage.TYPE_INT_RGB);
-		bi.setRGB(0, 0, image.myWidth, image.myHeight, image.myPixels, 0, image.myWidth);
-		Image img = makeColorTransparent(bi, new Color(0, 0, 0));
-		BufferedImage trans = imageToBufferedImage(img);
-		try {
-			File out = new File(Constants.getCacheDirectory() + "rsimg/dump/" + name + ".png");
-			ImageIO.write(trans, "png", out);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Turns an Image into a BufferedImage.
-	 * @param image
-	 * @return
-	 */
-    private static BufferedImage imageToBufferedImage(Image image) {
-        BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = bufferedImage.createGraphics();
-        g2.drawImage(image, 0, 0, null);
-        g2.dispose();
-        return bufferedImage;
-    }
-
-    /**
-     * Makes the specified color transparent in a buffered image.
-     * @param im
-     * @param color
-     * @return
-     */
-    public static Image makeColorTransparent(BufferedImage im, final Color color) {
-    	RGBImageFilter filter = new RGBImageFilter() {
-    		public int markerRGB = color.getRGB() | 0xFF000000;
-    		public final int filterRGB(int x, int y, int rgb) {
-    			if ((rgb | 0xFF000000) == markerRGB) {
-    				return 0x00FFFFFF & rgb;
-    			} else {
-    				return rgb;
-    			}
-    		}
-    	};
-    	ImageProducer ip = new FilteredImageSource(im.getSource(), filter);
-    	return Toolkit.getDefaultToolkit().createImage(ip);
-    }
-
-	public void init() {
-		main = this;
-		ActionHandler.main = main;
-		startRunnable(this, 1);
-	}
-
-	private void drawScrollbar(int x, int y, int height, int scrollPosition, int scrollMax, boolean isTransparent) {
+	private void drawScrollbar(int x, int y, int height, int scrollPosition, int scrollMax) {
 		int barHeight = ((height - 32) * height) / scrollMax;
 		if(barHeight < 8) {
 			barHeight = 8;
 		}
 		int offsetY = ((height - 32 - barHeight) * scrollPosition) / (scrollMax - height);
-		if (isTransparent) {
-			int alpha = 40;
-			int color = 0xFFFFFF;
-			RSDrawingArea.drawFilledAlphaPixels(x + 7, y + 3, 2, 11, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 6, y + 4, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 5, y + 5, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 4, y + 6, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 3, y + 7, 1, 2, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 9, y + 4, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 10, y + 5, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 11, y + 6, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 12, y + 7, 1, 2, color, alpha);
-			RSDrawingArea.drawVerticalAlphaLine(x, y + 16, height - 32, color, alpha);
-			RSDrawingArea.drawVerticalAlphaLine(x + 15, y + 16, height - 32, color, alpha);
-			RSDrawingArea.drawHorizontalAlphaLine(x, y + 17 + offsetY, 16, color, alpha);
-			RSDrawingArea.drawVerticalAlphaLine(x, y + 18 + offsetY, barHeight - 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 1, y + 17 + offsetY + 1, 1, 1, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 14, y + 17 + offsetY + 1, 1, 1, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 1, y + 18 + offsetY, 14, barHeight - 3, color, 15);
-			RSDrawingArea.drawFilledAlphaPixels(x + 1, y + 14 + offsetY + barHeight, 1, 1, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 14, y + 14 + offsetY + barHeight, 1, 1, color, alpha);
-			RSDrawingArea.drawVerticalAlphaLine(x + 15, y + 18 + offsetY, barHeight - 3, color, alpha);
-			RSDrawingArea.drawHorizontalAlphaLine(x, y + 15 + offsetY + barHeight, 16, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 7, y + height - 14, 2, 11, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 6, y + height - 7, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 5, y + height - 8, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 4, y + height - 9, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 3, y + height - 9, 1, 2, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 9, y + height - 7, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 10, y + height - 8, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 11, y + height - 9, 1, 3, color, alpha);
-			RSDrawingArea.drawFilledAlphaPixels(x + 12, y + height - 9, 1, 2, color, alpha);
-		} else {
-			scrollBar1.drawImage(x, y);
-			scrollBar2.drawImage(x, (y + height) - 16);
-			RSDrawingArea.drawFilledPixels(x, y + 16, 16, height - 32, scrollBackground);
-			RSDrawingArea.drawFilledPixels(x, y + 16 + offsetY, 16, barHeight, scrollFill);
-			RSDrawingArea.drawVerticalLine(x, y + 16 + offsetY, barHeight, scrollLight);
-			RSDrawingArea.drawVerticalLine(x + 1, y + 16 + offsetY, barHeight, scrollLight);
-			RSDrawingArea.drawHorizontalLine(x, y + 16 + offsetY, 16, scrollLight);
-			RSDrawingArea.drawHorizontalLine(x, y + 17 + offsetY, 16, scrollLight);
-			RSDrawingArea.drawVerticalLine(x + 15, y + 16 + offsetY, barHeight, scrollDark);
-			RSDrawingArea.drawVerticalLine(x + 14, y + 17 + offsetY, barHeight - 1, scrollDark);
-			RSDrawingArea.drawHorizontalLine(x, y + 15 + offsetY + barHeight, 16, scrollDark);
-			RSDrawingArea.drawHorizontalLine(x + 1, y + 14 + offsetY + barHeight, 15, scrollDark);
-		}
+		scrollBar1.drawImage(x, y);
+		scrollBar2.drawImage(x, (y + height) - 16);
+		RSDrawingArea.drawFilledPixels(x, y + 16, 16, height - 32, scrollBackground);
+		RSDrawingArea.drawFilledPixels(x, y + 16 + offsetY, 16, barHeight, scrollFill);
+		RSDrawingArea.drawVerticalLine(x, y + 16 + offsetY, barHeight, scrollLight);
+		RSDrawingArea.drawVerticalLine(x + 1, y + 16 + offsetY, barHeight, scrollLight);
+		RSDrawingArea.drawHorizontalLine(x, y + 16 + offsetY, 16, scrollLight);
+		RSDrawingArea.drawHorizontalLine(x, y + 17 + offsetY, 16, scrollLight);
+		RSDrawingArea.drawVerticalLine(x + 15, y + 16 + offsetY, barHeight, scrollDark);
+		RSDrawingArea.drawVerticalLine(x + 14, y + 17 + offsetY, barHeight - 1, scrollDark);
+		RSDrawingArea.drawHorizontalLine(x, y + 15 + offsetY + barHeight, 16, scrollDark);
+		RSDrawingArea.drawHorizontalLine(x + 1, y + 14 + offsetY + barHeight, 15, scrollDark);
 	}
 
-	public int getAmountColor(long amount) {
-		int color = 0xFFFFFF;
-		if (amount >= 1) {
-			color = 0xFFFF00;
-		}
-		if (amount >= 100000) {
-			color = 0xFFFFFF;
-		}
-		if (amount >= 10000000) {
-			color = 0x00FF80;
-		}
-		if (amount >= 10000000000L) {
-			color = 0x00FFFF;
-		}
-		return color;
-	}
-
-	public void process() {
-		processInput();
-		checkSize();
-	}
-
-	public void checkSize() {
-		boolean resized = false;
-		JInternalFrame viewport = UserInterface.viewport;
-		if (viewport != null) {
-			int width = viewport.getWidth() - (insets.left + insets.right);
-			int height = viewport.getHeight() - (insets.top + insets.bottom);
-			if (getCanvasWidth() != width) {
-				resized = true;
-			} else {
-				resized = false;
-			}
-			if (getCanvasHeight() != height) {
-				resized = true;
-			} else {
-				resized = false;
-			}
-			if (resized) {
-				imageProducer = new RSImageProducer(getCanvasWidth(), getCanvasHeight(), this);
-			}
-		}
-	}
-
-	public static Main main;
-	public static Main getInstance() {
-		return main;
-	}
-
-	public static void main(String args[]) {
-		Settings.checkDirectory();
-		Settings.read();
-		new UserInterface();
-	}
-
-	public float progress;
+	/**
+	 * Updates the progress bar.
+	 * @param string
+	 * @param percent
+	 */
 	public void updateProgress(String string, int percent) {
         for(float f = progress; f < (float)percent; f = (float)((double)f + 0.29999999999999999D)) {
             displayProgress(string, (int)f);
@@ -994,9 +544,13 @@ public class Main extends Canvas implements Runnable {
         progress = percent;
     }
 
+	/**
+	 * Displays the progress bar.
+	 * @param string
+	 * @param percent
+	 */
 	public void displayProgress(String string, int percent) {
-		while (strategy == null)
-		{
+		while (strategy == null) {
 			createBufferStrategy(2);
 			strategy = getBufferStrategy();
 		}
@@ -1040,7 +594,11 @@ public class Main extends Canvas implements Runnable {
 		return null;
 	}
 
-	private void doAction(int actionIndex) {
+	/**
+	 * Does the specified action for the actionIndex.
+	 * @param actionIndex
+	 */
+	public void doAction(int actionIndex) {
 		if(actionIndex < 0) {
 			return;
 		}
@@ -1082,41 +640,6 @@ public class Main extends Canvas implements Runnable {
 		}
 	}
 
-	public void cleanUpForQuit() {
-		menuActionCmd3 = null;
-		menuActionID = null;
-		menuActionName = null;
-		variousSettings = null;
-		imageProducer = null;
-		RSInterface.cache = null;
-		System.gc();
-	}
-
-	void startUp() {
-		try {
-			updateProgress("Unpacking archives...", 30);
-			titleArchive = getArchive(1);
-			small = new RSFont(false, "p11_full", titleArchive);
-			regular = new RSFont(false, "p12_full", titleArchive);
-			bold = new RSFont(false, "b12_full", titleArchive);
-			fancy = new RSFont(true, "q8_full", titleArchive);
-			interfaces = getArchive(3);
-			media = getArchive(4);
-			mediaArchive = new MediaArchive(media);
-			updateProgress("Unpacking media...", 65);
-			scrollBar1 = new RSImage(media, "scrollbar", 0);
-			scrollBar2 = new RSImage(media, "scrollbar", 1);
-			updateProgress("Unpacking interfaces...", 95);
-			RSFont fonts[] = { small, regular, bold, fancy };
-			RSInterface.load(interfaces, media, fonts);
-			mediaArchive.updateKnown();
-			updateProgress("Complete!", 100);
-			System.gc();
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	private String interfaceIntToString(int val) {
 		if(val < 0x3b9ac9ff) {
 			return String.valueOf(val);
@@ -1125,7 +648,7 @@ public class Main extends Canvas implements Runnable {
 		}
 	}
 
-	private void drawInterface(RSInterface rsi, int pos_x, int pos_y, int offsetY) {
+	public void drawInterface(RSInterface rsi, int pos_x, int pos_y, int offsetY) {
 		if(rsi.type != 0 || rsi.children == null) {
 			return;
 		}
@@ -1155,7 +678,7 @@ public class Main extends Canvas implements Runnable {
 				}
 				drawInterface(child, x, y, child.scrollPosition);
 				if(child.scrollMax > child.height) {
-					drawScrollbar(x + child.width, y, child.height, child.scrollPosition, child.scrollMax, false);
+					drawScrollbar(x + child.width, y, child.height, child.scrollPosition, child.scrollMax);
 				}
 			} else {
 				if(child.type != 1)
@@ -1259,7 +782,7 @@ public class Main extends Canvas implements Runnable {
 							if(child.filled) {
 								RSDrawingArea.drawFilledAlphaPixels(x, y, child.width, child.height, color, 256 - (child.alpha & 0xff));
 							} else {
-								RSDrawingArea.method338(y, child.height, 256 - (child.alpha & 0xff), color, child.width, x);
+								//RSDrawingArea.method338(y, child.height, 256 - (child.alpha & 0xff), color, child.width, x);
 							}
 						}
 					} else if(child.type == 4) {
@@ -1511,12 +1034,12 @@ public class Main extends Canvas implements Runnable {
 		RSDrawingArea.setBounds(startX, endX, startY, endY);
 	}
 
-	private int menuOffsetX;
-	private int menuOffsetY;
-	private int menuWidth;
-	private int menuHeight;
-
-	private void drawMenu(int offsetX, int offsetY) {
+	/**
+	 * Draws the context menu.
+	 * @param offsetX
+	 * @param offsetY
+	 */
+	public void drawMenu(int offsetX, int offsetY) {
 		int x = menuOffsetX - offsetX;
 		int y = menuOffsetY - offsetY;
 		int width = menuWidth;
@@ -1539,7 +1062,10 @@ public class Main extends Canvas implements Runnable {
 		}
 	}
 
-	private void determineMenuSize() {
+	/**
+	 * Determines the context menu size.
+	 */
+	public void determineMenuSize() {
 		int width = regular.getEffectTextWidth("Choose Action");
 		for(int action = 0; action < getActions().length; action++) {
 			int itemWwidth = bold.getEffectTextWidth(getActions()[action]);
@@ -1717,6 +1243,14 @@ public class Main extends Canvas implements Runnable {
 		return true;
 	}
 
+	/**
+	 * Is the mouse in the specified region?
+	 * @param x1
+	 * @param x2
+	 * @param y1
+	 * @param y2
+	 * @return
+	 */
 	public boolean mouseInRegion(int x1, int x2, int y1, int y2) {
 		if (getScale() != 1) {
 			x2 = (int) ((x2 - x1) * getScale());
@@ -1736,6 +1270,14 @@ public class Main extends Canvas implements Runnable {
 		return false;
 	}
 
+	/**
+	 * Is the click in the specified region?
+	 * @param x1
+	 * @param x2
+	 * @param y1
+	 * @param y2
+	 * @return
+	 */
 	public boolean clickInRegion(int x1, int x2, int y1, int y2) {
 		if (getScale() != 1) {
 			x2 = (int) ((x2 - x1) * getScale());
@@ -1785,13 +1327,107 @@ public class Main extends Canvas implements Runnable {
 		return getHeight() + 1;
 	}
 
-	public void processDrawing() {
-		displayInterfacePane();
+	/**
+	 * The InputListener instance.
+	 */
+	public InputListener inputListener = null;
+
+	/**
+	 * The ViewportRenderer instance.
+	 */
+	public ViewportRenderer renderer = null;
+
+	/**
+	 * The UserInterface instance.
+	 */
+	public static UserInterface ui;
+
+	/**
+	 * Gets the UserInterface instance.
+	 * @return
+	 */
+	public static UserInterface getUI() {
+		return ui;
+	}
+
+	/**
+	 * The Main instance.
+	 */
+	public static Main main;
+
+	/**
+	 * Gets this instance.
+	 * @return
+	 */
+	public static Main getInstance() {
+		return main;
+	}
+
+	/**
+	 * Cleans up the program for quitting.
+	 */
+	public void cleanUpForQuit() {
+		menuActionCmd3 = null;
+		menuActionID = null;
+		menuActionName = null;
+		variousSettings = null;
+		imageProducer = null;
+		RSInterface.cache = null;
+		System.gc();
+	}
+
+	/**
+	 * Starts the program.
+	 */
+	void startUp() {
+		try {
+			updateProgress("Unpacking archives...", 20);
+			titleArchive = getArchive(1);
+			small = new RSFont(false, "p11_full", titleArchive);
+			regular = new RSFont(false, "p12_full", titleArchive);
+			bold = new RSFont(false, "b12_full", titleArchive);
+			fancy = new RSFont(true, "q8_full", titleArchive);
+			interfaces = getArchive(3);
+			media = getArchive(4);
+			mediaArchive = new MediaArchive(media);
+			updateProgress("Unpacking media...", 40);
+			scrollBar1 = new RSImage(media, "scrollbar", 0);
+			scrollBar2 = new RSImage(media, "scrollbar", 1);
+			updateProgress("Unpacking interfaces...", 60);
+			RSFont fonts[] = { small, regular, bold, fancy };
+			RSInterface.load(interfaces, media, fonts);
+			mediaArchive.updateKnown();
+			updateProgress("Complete!", 100);
+			System.gc();
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * The main method.
+	 * @param args
+	 */
+	public static void main(String args[]) {
+		Settings.checkDirectory();
+		Settings.read();
+		ui = new UserInterface();
+	}
+
+	/**
+	 * The init method.
+	 */
+	public void init() {
+		main = this;
+		ActionHandler.main = main;
+		startRunnable(this, 1);
 	}
 
 	public Main() {
+		inputListener = new InputListener(this);
+		renderer = new ViewportRenderer(this);
 		cache = new Cache();
-		imageProducer = new RSImageProducer(765, 503, this);
+		imageProducer = new RSImageProducer(765, 504, this);
 		RSDrawingArea.setAllPixelsToZero();
 		arial = new RealFont[]{ new RealFont(this, "Arial", 0, 10, true), new RealFont(this, "Arial", 0, 12, true), new RealFont(this, "Arial", 0, 14, true) };
 		arialColor = 0xD8D8D8;;
@@ -1811,6 +1447,14 @@ public class Main extends Canvas implements Runnable {
 		scaledY = 0;
 	}
 
+	public static int horizontalScale = 10;
+	public static int verticalScale = 10;
+	public boolean adjustingGrid = false;
+	public int sliderThickness = 8;
+	public int menuActions = 0;
+	public int actionIndex = -1;
+	public static boolean selectionLocked = false;
+	public static boolean movingSelection = false;
 	public static int verticalPos;
 	public static int horizontalPos;
 	public int selectionX = -1;
@@ -1830,8 +1474,17 @@ public class Main extends Canvas implements Runnable {
 	public static int selectedId = -1;
 	public static int hoverId = -1;
 	public int[] alpha = { 0, 0, 0, 0 };
+	private boolean[] increasing = { false, false, false, false };
+	private int[] minimum = { 75, 0, 0, 0 };
+	private int[] maximum = { 200, 256, 256, 256 };
+	private int[] rate = { 1, 8, 8, 8 };
 
-	private boolean menuOpen;
+	public float progress;
+	public int menuOffsetX;
+	public int menuOffsetY;
+	public int menuWidth;
+	public int menuHeight;
+	public boolean menuOpen;
 	private final int scrollLight;
 	private final int scrollDark;
 	public int variousSettings[];
@@ -1846,12 +1499,12 @@ public class Main extends Canvas implements Runnable {
 	private int anInt1085;
 	private int activeInterfaceType;
 	static int anInt1089;
-	private int[] menuActionCmd3;
-	private int[] menuActionID;
-	private RSImageProducer imageProducer;
-	private int menuActionRow;
-	private boolean aBoolean1149;
-	private String[] menuActionName;
+	public int[] menuActionCmd3;
+	public int[] menuActionID;
+	public RSImageProducer imageProducer;
+	public int menuActionRow;
+	public boolean aBoolean1149;
+	public String[] menuActionName;
 	public RSFont small;
 	public RSFont regular;
 	public RSFont bold;
@@ -1872,8 +1525,12 @@ public class Main extends Canvas implements Runnable {
 		displayProgress("Loading...", 0);
 		startUp();
 		do {
-			processInput();
-			processDrawing();
+			if (inputListener != null) {
+				inputListener.process();
+			}
+			if (renderer != null) {
+				renderer.render();
+			}
 		} while(true);
 	}
 
@@ -1955,6 +1612,6 @@ public class Main extends Canvas implements Runnable {
 	protected final int charQueue[] = new int[128];
 	protected int writeIndex;
 	public static int anInt34;
-	private BufferStrategy strategy;
+	public BufferStrategy strategy;
 
 }

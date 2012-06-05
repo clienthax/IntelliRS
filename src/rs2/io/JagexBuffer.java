@@ -11,10 +11,6 @@ public final class JagexBuffer extends NodeSub {
 		offset = 0;
 	}
 
-	public void putOpCode(int opcode) {
-		payload[offset++] = (byte) (opcode + cryption.getNextKey());
-	}
-
 	public void putBoolean(boolean bool) {
 		payload[offset++] = (byte) (bool ? 1 : 0);
 	}
@@ -134,7 +130,7 @@ public final class JagexBuffer extends NodeSub {
 		int off = offset;
 		while (payload[offset++] != 10);
 		byte dest[] = new byte[offset - off - 1];
-		System.arraycopy(payload, off, dest, off - off, offset - 1 - off);
+		System.arraycopy(payload, off, dest, 0, offset - 1 - off);
 		return dest;
 	}
 

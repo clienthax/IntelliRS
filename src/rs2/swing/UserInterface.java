@@ -24,29 +24,24 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.UIManager;
-import javax.swing.event.TreeModelEvent;
-import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 import rs2.Main;
-import rs2.RSInterface;
 import rs2.Settings;
 import rs2.constants.Constants;
+import rs2.editor.RSInterface;
 
-public class UserInterface extends Main implements ActionListener, TreeSelectionListener, TreeModelListener {
+public class UserInterface extends Main implements ActionListener, TreeSelectionListener {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-
-	public static UserInterface ui;
 
 	public static JMenuBar menuBar;
 	public static JMenu fileMenu;
@@ -70,7 +65,6 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 	        JFrame.setDefaultLookAndFeelDecorated(true);
 	        JDialog.setDefaultLookAndFeelDecorated(true);
 			build();
-			ui = this;
 			init();
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -80,8 +74,8 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 	@SuppressWarnings("unchecked")
 	public void build() {
 		try {
-			int width = 800;
-			int height = 500;
+			int width = 900;
+			int height = 600;
 			frame = new JFrame(Constants.NAME);
 			desktop = new JDesktopPane();
 			desktop.setBackground(new Color(28, 28, 28));
@@ -134,16 +128,9 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 	public void createTree() {
 		tree = new JTree();
 		tree.setModel(treeModel);
-		treeModel.addTreeModelListener(this);
-		//tree.addMouseListener(this);
 		tree.addTreeSelectionListener(this);
 		tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-		//tree.setCellRenderer(new CellRenderer());
-		tree.setCellRenderer(getCellRenderer());
-	}
-
-	public DefaultTreeCellRenderer getCellRenderer() {
-		return new CellRenderer();
+		tree.setCellRenderer(new CellRenderer());
 	}
 
 	protected boolean isLocked(Object value) {
@@ -275,29 +262,5 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 				break;
 			}
 		}
-	}
-
-	@Override
-	public void treeNodesChanged(TreeModelEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void treeNodesInserted(TreeModelEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void treeNodesRemoved(TreeModelEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
-	public void treeStructureChanged(TreeModelEvent arg0) {
-		// TODO Auto-generated method stub
-		
 	}
 }
