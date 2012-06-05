@@ -17,7 +17,7 @@ public class ImageArchive {
 		this.jagArchive = jagArchive;
 		byte[] indexData = jagArchive.getFile("index.dat");
 		for (int index = 0; index < jagArchive.getFileCount(); index++) {
-			int hash = jagArchive.getIdentifierAt(index);
+			int hash = jagArchive.getHashAt(index);
 			if (isValid(hash)) {
 				this.images.add(new ImageGroup(indexData, jagArchive.getFileAt(index), true));
 			}
@@ -55,7 +55,7 @@ public class ImageArchive {
 		int x = 0;
 		ExtendedByteArrayOutputStream indexBuf = new ExtendedByteArrayOutputStream();
 		for (int i = 0; i < this.jagArchive.getFileCount(); i++) {
-			int hash = this.jagArchive.getIdentifierAt(i);
+			int hash = this.jagArchive.getHashAt(i);
 			if (isValid(hash)) {
 				((ImageGroup)this.images.get(x)).appendThisIndex(indexBuf);
 				this.jagArchive.updateFile(i, ((ImageGroup)this.images.get(x++)).packData());

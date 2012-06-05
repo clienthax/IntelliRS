@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 import rs2.io.ExtendedByteArrayOutputStream;
 import rs2.io.JagexBuffer;
-import rs2.util.io.Quantize;
+import rs2.util.Quantize;
 
 public final class ImageGroup {
 	public int groupMaxWidth;

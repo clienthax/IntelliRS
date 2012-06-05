@@ -227,7 +227,7 @@ public class MediaArchive {
 		String[] values = new String[numImages];
 		int count = 0;
 		for (int index = 0; index < numImages; index++) {
-			int identifier = archive.getIdentifierAt(index);
+			int identifier = archive.getHashAt(index);
 			if (imageArchive.isValid(identifier)) {
 				String fileName = String.valueOf(identifier);
 				for (int id = 0; id < knownArchives.size(); id++) {

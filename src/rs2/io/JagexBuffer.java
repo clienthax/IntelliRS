@@ -11,6 +11,10 @@ public final class JagexBuffer extends NodeSub {
 		offset = 0;
 	}
 
+	public byte[] getData() {
+		return payload;
+	}
+
 	public void putBoolean(boolean bool) {
 		payload[offset++] = (byte) (bool ? 1 : 0);
 	}
@@ -71,7 +75,11 @@ public final class JagexBuffer extends NodeSub {
 		payload[offset++] = 10;
 	}
 
-	public void putBytes(byte buff[], int len, int off) {
+	public void put(byte[] buff) {
+		putBytes(buff, 0, buff.length);
+	}
+
+	public void putBytes(byte buff[], int off, int len) {
 		for (int index = off; index < off + len; index++) {
 			payload[offset++] = buff[index];
 		}
@@ -191,7 +199,7 @@ public final class JagexBuffer extends NodeSub {
 		byte dest[] = biginteger3.toByteArray();
 		offset = 0;
 		putByte(dest.length);
-		putBytes(dest, dest.length, 0);
+		putBytes(dest, 0, dest.length);
 	}
 
 	public void putByteC(int val) {
@@ -301,5 +309,4 @@ public final class JagexBuffer extends NodeSub {
 			0x3ffff, 0x7ffff, 0xfffff, 0x1fffff, 0x3fffff, 0x7fffff, 0xffffff,
 			0x1ffffff, 0x3ffffff, 0x7ffffff, 0xfffffff, 0x1fffffff, 0x3fffffff,
 			0x7fffffff, -1 };
-	public ISAACRandomGen cryption;
 }

@@ -1,4 +1,4 @@
-package rs2.util.io;
+package rs2.util;
 
 public class ByteArray {
 
@@ -8,6 +8,11 @@ public class ByteArray {
 	public ByteArray(byte[] bytes) {
 		this.bytes = bytes;
 		this.length = bytes.length;
+	}
+
+	public ByteArray(byte[] bytes, int length) {
+		this.bytes = bytes;
+		this.length = length;
 	}
 
 	public byte[] getBytes() {

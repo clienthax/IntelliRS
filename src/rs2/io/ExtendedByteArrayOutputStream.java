@@ -12,33 +12,42 @@ public class ExtendedByteArrayOutputStream extends ByteArrayOutputStream {
         super();
     }
 
-    public void putShort(int s) {
-        write(s >> 8);
-        write(s);
+    public void putShort(int val) {
+        write(val >> 8);
+        write(val);
+    }
+   
+	public void putSpaceSaver(int val) {
+		write((val >> 8) + 1);
+		write(val);
+	}
+
+	public void putByte(int val) {
+		write(val);
+	}
+
+    public void put3Bytes(int val) {
+        write(val >> 16);
+        write(val >> 8);
+        write(val);
     }
 
-    public void put3Bytes(int s) {
-        write(s >> 16);
-        write(s >> 8);
-        write(s);
+    public void putInt(int val) {
+        write(val >> 24);
+        write(val >> 16);
+        write(val >> 8);
+        write(val);
     }
 
-    public void putInt(int s) {
-        write(s >> 24);
-        write(s >> 16);
-        write(s >> 8);
-        write(s);
-    }
-
-    public void putLong(long l) {
-        write((int) (l >> 56));
-        write((int) (l >> 48));
-        write((int) (l >> 40));
-        write((int) (l >> 32));
-        write((int) (l >> 24));
-        write((int) (l >> 16));
-        write((int) (l >> 8));
-        write((int) l);
+    public void putLong(long val) {
+        write((int) (val >> 56));
+        write((int) (val >> 48));
+        write((int) (val >> 40));
+        write((int) (val >> 32));
+        write((int) (val >> 24));
+        write((int) (val >> 16));
+        write((int) (val >> 8));
+        write((int) val);
     }
 
     public void putString(String s) throws IOException {
@@ -46,11 +55,11 @@ public class ExtendedByteArrayOutputStream extends ByteArrayOutputStream {
         write(10);
     }
 
-	public void putSmart(int i) {
-		if(i < 64 && i >= -64) {
-			write(i + 64);
+	public void putSmart(int val) {
+		if(val < 64 && val >= -64) {
+			write(val + 64);
 		} else {
-			putShort(i + 49152);
+			putShort(val + 49152);
 		}
 	}
 }

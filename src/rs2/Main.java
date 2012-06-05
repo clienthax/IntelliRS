@@ -7,13 +7,15 @@ import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.image.BufferStrategy;
 
+import javax.swing.JOptionPane;
+
 import rs2.cache.Archive;
 import rs2.cache.Cache;
+import rs2.cache.CacheIndice;
 import rs2.cache.media.MediaArchive;
 import rs2.constants.Constants;
 import rs2.editor.InputListener;
 import rs2.editor.ViewportRenderer;
-import rs2.editor.RSInterface;
 import rs2.graphics.RSDrawingArea;
 import rs2.graphics.RSFont;
 import rs2.graphics.RSImage;
@@ -26,6 +28,29 @@ import rs2.swing.UserInterface;
 
 @SuppressWarnings("serial")
 public class Main extends Canvas implements Runnable {
+
+	/**
+	 * Recompiles the data.dat file and the interface archive.
+	 */
+	public void recompile() {
+		saving = true;
+		CacheIndice indice = cache.getIndice(0);
+		try {
+			byte[] interfaceData = RSInterface.getData();
+			interfaces.updateFile(interfaces.indexOf("data"), interfaceData);
+			byte[] data = interfaces.recompile();
+			indice.updateFile(3, data);
+			cache.rebuildCache();
+			//rs2.util.DataUtils.writeFile(Constants.getCacheDirectory() + "data", interfaceData);
+			//rs2.util.DataUtils.writeFile(Constants.getCacheDirectory() + "interface.jag", data);
+			JOptionPane.showMessageDialog(this, "Interface archive repacked successfully.");
+			saving = false;
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(this, "An error occurred while repacking the interface archive.");
+			saving = false;
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * Is an area being selected or already selected?
@@ -1373,7 +1398,6 @@ public class Main extends Canvas implements Runnable {
 		variousSettings = null;
 		imageProducer = null;
 		RSInterface.cache = null;
-		System.gc();
 	}
 
 	/**
@@ -1381,24 +1405,31 @@ public class Main extends Canvas implements Runnable {
 	 */
 	void startUp() {
 		try {
-			updateProgress("Unpacking archives...", 20);
+			updateProgress("Unpacking archives...", 25);
 			titleArchive = getArchive(1);
 			small = new RSFont(false, "p11_full", titleArchive);
 			regular = new RSFont(false, "p12_full", titleArchive);
 			bold = new RSFont(false, "b12_full", titleArchive);
 			fancy = new RSFont(true, "q8_full", titleArchive);
 			interfaces = getArchive(3);
+			if (interfaces == null) {
+				System.out.println("Interface archive is null.");
+				return;
+			}
 			media = getArchive(4);
+			if (media == null) {
+				System.out.println("Media archive is null.");
+				return;
+			}
 			mediaArchive = new MediaArchive(media);
-			updateProgress("Unpacking media...", 40);
+			updateProgress("Unpacking media...", 50);
 			scrollBar1 = new RSImage(media, "scrollbar", 0);
 			scrollBar2 = new RSImage(media, "scrollbar", 1);
-			updateProgress("Unpacking interfaces...", 60);
+			updateProgress("Unpacking interfaces...", 75);
 			RSFont fonts[] = { small, regular, bold, fancy };
 			RSInterface.load(interfaces, media, fonts);
 			mediaArchive.updateKnown();
 			updateProgress("Complete!", 100);
-			System.gc();
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -1478,6 +1509,7 @@ public class Main extends Canvas implements Runnable {
 	private int[] minimum = { 75, 0, 0, 0 };
 	private int[] maximum = { 200, 256, 256, 256 };
 	private int[] rate = { 1, 8, 8, 8 };
+	public boolean saving = false;
 
 	public float progress;
 	public int menuOffsetX;
@@ -1524,14 +1556,26 @@ public class Main extends Canvas implements Runnable {
 		addKeyListener(new MyKeyListener());
 		displayProgress("Loading...", 0);
 		startUp();
-		do {
-			if (inputListener != null) {
-				inputListener.process();
-			}
-			if (renderer != null) {
-				renderer.render();
-			}
-		} while(true);
+		try {
+			do {
+				long start = System.currentTimeMillis();
+				if (inputListener != null) {
+					//animTick++;
+					inputListener.process();
+				}
+				if (renderer != null) {
+					renderer.render();
+					//animTick = 0;
+				}
+				long done = System.currentTimeMillis() - start;
+				if(20 - done >= 0) {
+				    Thread.sleep(20 - done);
+				} else {
+					Thread.sleep(0);
+				}
+			} while(true);
+		} catch(Exception e) {
+		}
 	}
 
 	private void exit() {

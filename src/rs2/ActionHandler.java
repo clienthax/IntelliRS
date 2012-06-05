@@ -1,6 +1,5 @@
 package rs2;
 
-import rs2.editor.RSInterface;
 import rs2.graphics.RSImage;
 import rs2.swing.UserInterface;
 import rs2.swing.edit.ImagePane;

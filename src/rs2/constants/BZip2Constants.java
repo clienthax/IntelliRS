@@ -1,4 +1,4 @@
-/*    */ package rs2.util.io.bzip;
+/*    */ package rs2.constants;
 /*    */ 
 /*    */ public abstract interface BZip2Constants
 /*    */ {

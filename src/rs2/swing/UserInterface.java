@@ -3,8 +3,8 @@ package rs2.swing;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyVetoException;
@@ -32,9 +32,9 @@ import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 import rs2.Main;
+import rs2.RSInterface;
 import rs2.Settings;
 import rs2.constants.Constants;
-import rs2.editor.RSInterface;
 
 public class UserInterface extends Main implements ActionListener, TreeSelectionListener {
 
@@ -74,7 +74,7 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 	@SuppressWarnings("unchecked")
 	public void build() {
 		try {
-			int width = 900;
+			int width = 800;
 			int height = 600;
 			frame = new JFrame(Constants.NAME);
 			desktop = new JDesktopPane();
@@ -87,15 +87,16 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 			desktop.add(viewport);
 			frame.getContentPane().add(desktop, BorderLayout.CENTER);
 			initMenuBar();
-			frame.setResizable(true);
-			frame.setVisible(true);
-			frame.setSize(width + insets.left + insets.right, height + insets.top + insets.bottom + menuBar.getHeight());
-			frame.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - width) / 2, (Toolkit.getDefaultToolkit().getScreenSize().height - height) / 2);
+			frame.setSize(new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom + menuBar.getHeight()));
+			frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+			//frame.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - width) / 2, (Toolkit.getDefaultToolkit().getScreenSize().height - height) / 2);
 			frame.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 			frame.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
+			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			frame.setResizable(true);
+			frame.setVisible(true);
 			frame.requestFocus();
 			frame.toFront();
-			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -243,7 +244,7 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 					Settings.write();
 				}
 				if (cmd.equals("save")) {
-					RSInterface.save();
+					Main.getInstance().recompile();
 				}
 			}
 		} catch (Exception e) {

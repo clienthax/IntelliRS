@@ -3,216 +3,270 @@ package rs2.cache;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import rs2.io.BZip2InputStream;
 import rs2.io.ExtendedByteArrayOutputStream;
 import rs2.io.JagexBuffer;
+import rs2.io.bzip2.BZip2Decompressor;
+import rs2.util.ByteArray;
 import rs2.util.DataUtils;
-import rs2.util.io.ByteArray;
 
+/**
+ * @author tom
+ */
 public class Archive {
 
-	private ArrayList<ByteArray> files = new ArrayList<ByteArray>();
+	private ArrayList<ArchiveFile> files = new ArrayList<ArchiveFile>();
 	byte[] finalBuffer;
 	private int totalFiles;
-	private ArrayList<Integer> identifiers = new ArrayList<Integer>();
-	private ArrayList<Integer> decompressedSizes = new ArrayList<Integer>();
-	private ArrayList<Integer> compressedSizes = new ArrayList<Integer>();
-	private ArrayList<Integer> startOffsets = new ArrayList<Integer>();
-	boolean compressedAsWhole;
+	boolean decompressed;
 
-	public Archive(byte[] data) {
-		JagexBuffer buffer = new JagexBuffer(data);
+	/**
+	 * Reads and initializes the archive.
+	 * @param compressedData
+	 */
+	public Archive(byte compressedData[]) {
+		JagexBuffer buffer = new JagexBuffer(compressedData);
 		int decompressedSize = buffer.get3Bytes();
 		int compressedSize = buffer.get3Bytes();
 		if (compressedSize != decompressedSize) {
-			byte[] abyte1 = new byte[decompressedSize];
-			BZip2InputStream.resetAndRead(abyte1, decompressedSize, data, compressedSize, 6);
-			finalBuffer = abyte1;
+			byte decompressedData[] = new byte[decompressedSize];
+			BZip2Decompressor.decompressBuffer(decompressedData, decompressedSize, compressedData, compressedSize, 6);
+			finalBuffer = decompressedData;
 			buffer = new JagexBuffer(finalBuffer);
-			compressedAsWhole = true;
+			decompressed = true;
 		} else {
-			finalBuffer = data;
-			compressedAsWhole = false;
+			finalBuffer = compressedData;
+			decompressed = false;
 		}
 		totalFiles = buffer.getUnsignedShort();
 		int offset = buffer.offset + totalFiles * 10;
-		for (int l = 0; l < totalFiles; l++) {
-			identifiers.add(Integer.valueOf(buffer.getInt()));
-			decompressedSizes.add(Integer.valueOf(buffer.get3Bytes()));
-			compressedSizes.add(Integer.valueOf(buffer.get3Bytes()));
-			startOffsets.add(Integer.valueOf(offset));
-			offset += ((Integer)compressedSizes.get(l)).intValue();
-			files.add(new ByteArray(getFileAt(l)));
+		for (int index = 0; index < totalFiles; index++) {
+			int hash = buffer.getInt();
+			int size = buffer.get3Bytes();
+			int cSize = buffer.get3Bytes();
+			files.add(new ArchiveFile(hash, size, cSize, offset, new ByteArray(finalBuffer), decompressed));
+			offset += cSize;
 		}
 	}
 
-	public byte[] recompile() {
-		try {
-			byte[] compressedWhole = compileUncompressed();
-			int compressedWholeDecompressedSize = compressedWhole.length;
-			compressedWhole = DataUtils.bz2Compress(compressedWhole);
-			int compressedWholeSize = compressedWhole.length;
-			byte[] compressedIndividually = compileCompressed();
-			int compressedIndividuallySize = compressedIndividually.length;
-			boolean compressedAsWhole = false;
-			if (compressedWholeSize < compressedIndividuallySize) {
-				compressedAsWhole = true;
-			}
-			ExtendedByteArrayOutputStream finalBuf = new ExtendedByteArrayOutputStream();
-			if (compressedAsWhole) {
-				finalBuf.put3Bytes(compressedWholeDecompressedSize);
-				finalBuf.put3Bytes(compressedWholeSize);
-				finalBuf.write(compressedWhole);
-			} else {
-				finalBuf.put3Bytes(compressedIndividuallySize);
-				finalBuf.put3Bytes(compressedIndividuallySize);
-				finalBuf.write(compressedIndividually);
-			}
-			finalBuf.close();
-			return finalBuf.toByteArray();
-		} catch (IOException e) {
-			e.printStackTrace();
+	/**
+	 * Recompiles and returns the archive data as a byte array.
+	 * @return
+	 * @throws IOException
+	 */
+	public byte[] recompile() throws IOException {
+		byte[] compressedWhole = compileUncompressed();
+		int compressedWholeDecompressedSize = compressedWhole.length;
+		compressedWhole = DataUtils.compressBZip2(compressedWhole);
+		int compressedWholeSize = compressedWhole.length;
+		byte[] compressedIndividually = compileCompressed();
+		int compressedIndividuallySize = compressedIndividually.length;
+		boolean compressedAsWhole = false;
+		if (compressedWholeSize < compressedIndividuallySize) {
+			compressedAsWhole = true;
 		}
-		return null;
+		ExtendedByteArrayOutputStream finalBuf = new ExtendedByteArrayOutputStream();
+		if (compressedAsWhole) {
+			finalBuf.put3Bytes(compressedWholeDecompressedSize);
+			finalBuf.put3Bytes(compressedWholeSize);
+			finalBuf.write(compressedWhole);
+		} else {
+			finalBuf.put3Bytes(compressedIndividuallySize);
+			finalBuf.put3Bytes(compressedIndividuallySize);
+			finalBuf.write(compressedIndividually);
+		}
+		finalBuf.close();
+		return finalBuf.toByteArray();
 	}
 
-	private byte[] compileUncompressed() {
-		try {
-			ExtendedByteArrayOutputStream fileBuf = new ExtendedByteArrayOutputStream();
-			for (int i = 0; i < totalFiles; i++) {
-				decompressedSizes.set(i, Integer.valueOf(((ByteArray)files.get(i)).length));
-				compressedSizes.set(i, Integer.valueOf(((ByteArray)files.get(i)).length));
-				fileBuf.write(((ByteArray)files.get(i)).getBytes());
-			}
-			byte[] filesSection = fileBuf.toByteArray();
-			fileBuf.close();
-			ExtendedByteArrayOutputStream fileInfo = new ExtendedByteArrayOutputStream();
-			fileInfo.putShort(totalFiles);
-			for (int i = 0; i < totalFiles; i++) {
-				fileInfo.putInt(((Integer)identifiers.get(i)).intValue());
-				fileInfo.put3Bytes(((Integer)decompressedSizes.get(i)).intValue());
-				fileInfo.put3Bytes(((Integer)compressedSizes.get(i)).intValue());
-			}
-			byte[] fileInfoSection = fileInfo.toByteArray();
-			fileInfo.close();
-			ExtendedByteArrayOutputStream finalBuffer = new ExtendedByteArrayOutputStream();
-			finalBuffer.write(fileInfoSection);
-			finalBuffer.write(filesSection);
-			finalBuffer.close();
-			return finalBuffer.toByteArray();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	private byte[] compileCompressed() throws IOException {
-		ExtendedByteArrayOutputStream fileBuf = new ExtendedByteArrayOutputStream();
+	/**
+	 * Compiles and returns the archive's uncompressed data.
+	 * @return
+	 * @throws IOException
+	 */
+	private byte[] compileUncompressed() throws IOException {
+		ExtendedByteArrayOutputStream fileData = new ExtendedByteArrayOutputStream();
 		for (int i = 0; i < totalFiles; i++) {
-			decompressedSizes.set(i, Integer.valueOf(((ByteArray)files.get(i)).length));
-			byte[] compressed = DataUtils.bz2Compress(((ByteArray)files.get(i)).getBytes());
-			compressedSizes.set(i, Integer.valueOf(compressed.length));
-			fileBuf.write(compressed);
+			files.get(i).setSize(files.get(i).getData().length);
+			files.get(i).setCompressedSize(files.get(i).getData().length);
+			fileData.write(files.get(i).getData());
 		}
-		byte[] filesSection = fileBuf.toByteArray();
-		fileBuf.close();
+		fileData.close();
 		ExtendedByteArrayOutputStream fileInfo = new ExtendedByteArrayOutputStream();
 		fileInfo.putShort(totalFiles);
 		for (int i = 0; i < totalFiles; i++) {
-			fileInfo.putInt(((Integer)identifiers.get(i)).intValue());
-			fileInfo.put3Bytes(((Integer)decompressedSizes.get(i)).intValue());
-			fileInfo.put3Bytes(((Integer)compressedSizes.get(i)).intValue());
+			fileInfo.putInt(files.get(i).getHash());
+			fileInfo.put3Bytes(files.get(i).getSize());
+			fileInfo.put3Bytes(files.get(i).getCompressedSize());
 		}
-		byte[] fileInfoSection = fileInfo.toByteArray();
 		fileInfo.close();
 		ExtendedByteArrayOutputStream finalBuffer = new ExtendedByteArrayOutputStream();
-		finalBuffer.write(fileInfoSection);
-		finalBuffer.write(filesSection);
+		finalBuffer.write(fileInfo.toByteArray());
+		finalBuffer.write(fileData.toByteArray());
 		finalBuffer.close();
 		return finalBuffer.toByteArray();
 	}
 
+	/**
+	 * Compiles and returns the archive's compressed data.
+	 * @return
+	 * @throws IOException
+	 */
+	private byte[] compileCompressed() throws IOException {
+		ExtendedByteArrayOutputStream fileData = new ExtendedByteArrayOutputStream();
+		for (int i = 0; i < totalFiles; i++) {
+			files.get(i).setSize(files.get(i).data.length);
+			byte[] compressed = DataUtils.compressBZip2(files.get(i).getData());
+			files.get(i).setCompressedSize(compressed.length);
+			fileData.write(compressed);
+		}
+		fileData.close();
+		ExtendedByteArrayOutputStream fileInfo = new ExtendedByteArrayOutputStream();
+		fileInfo.putShort(totalFiles);
+		for (int i = 0; i < totalFiles; i++) {
+			fileInfo.putInt(files.get(i).getHash());
+			fileInfo.put3Bytes(files.get(i).getSize());
+			fileInfo.put3Bytes(files.get(i).getCompressedSize());
+		}
+		fileInfo.close();
+		ExtendedByteArrayOutputStream finalBuffer = new ExtendedByteArrayOutputStream();
+		finalBuffer.write(fileInfo.toByteArray());
+		finalBuffer.write(fileData.toByteArray());
+		finalBuffer.close();
+		return finalBuffer.toByteArray();
+	}
+
+	/**
+	 * Gets the data of the file at the specified index.
+	 * @param at
+	 * @return
+	 */
 	public byte[] getFileAt(int at) {
-		byte[] dataBuffer = new byte[((Integer)decompressedSizes.get(at)).intValue()];
-		if (!compressedAsWhole)
-			BZip2InputStream.resetAndRead(dataBuffer, ((Integer)decompressedSizes.get(at)).intValue(), finalBuffer, ((Integer)compressedSizes.get(at)).intValue(), ((Integer)startOffsets.get(at)).intValue());
-		else {
-			System.arraycopy(finalBuffer, ((Integer)startOffsets.get(at)).intValue(), dataBuffer, 0, ((Integer)decompressedSizes.get(at)).intValue());
+		byte dataBuffer[] = new byte[files.get(at).getSize()];
+		if (!decompressed) {
+			BZip2Decompressor.decompressBuffer(dataBuffer, files.get(at).getSize(), finalBuffer, files.get(at).getCompressedSize(), files.get(at).offset);
+		} else {
+			System.arraycopy(finalBuffer, files.get(at).offset, dataBuffer, 0, files.get(at).getSize());
 		}
 		return dataBuffer;
 	}
 
-	public byte[] getFile(int identifier) {
+	/**
+	 * Gets the data of the file for the specified hash.
+	 * @param hash
+	 * @return
+	 */
+	public byte[] getFile(int hash) {
 		for (int index = 0; index < totalFiles; index++) {
-			if (((Integer) identifiers.get(index)).intValue() == identifier) {
+			if (files.get(index).getHash() == hash) {
 				return getFileAt(index);
 			}
 		}
 		return null;
 	}
 
-	public int getIdentifierAt(int at) {
-		return ((Integer) identifiers.get(at)).intValue();
+	/**
+	 * Gets the hash at the specified index.
+	 * @param index
+	 * @return
+	 */
+	public int getHashAt(int index) {
+		return files.get(index).getHash();
 	}
 
-	public int getDecompressedSize(int at) {
-		return ((Integer) decompressedSizes.get(at)).intValue();
+	/**
+	 * Gets the decompressed size at the specified index.
+	 * @param index
+	 * @return
+	 */
+	public int getDecompressedSize(int index) {
+		return files.get(index).getSize();
 	}
 
+	/**
+	 * Gets the total number of files in the archive.
+	 * @return
+	 */
 	public int getFileCount() {
 		return totalFiles;
 	}
 
-	public byte[] getFile(String identStr) {
-		return getFile(getHash(identStr));
+	/**
+	 * Gets the data of the file for the specified name.
+	 * @param name
+	 * @return
+	 */
+	public byte[] getFile(String name) {
+		return getFile(DataUtils.getHash(name));
 	}
 
-	public static int getHash(String identStr) {
-		int identifier = 0;
-		identStr = identStr.toUpperCase();
-		for (int id = 0; id < identStr.length(); id++) {
-			identifier = identifier * 61 + identStr.charAt(id) - 32;
-		}
-		return identifier;
+	/**
+	 * Renames the file at the specified index with a new hash.
+	 * @param index
+	 * @param hash
+	 */
+	public void renameFile(int index, int hash) {
+		files.get(index).setHash(hash);
 	}
 
-	public void renameFile(int index, int newName) {
-		identifiers.set(index, Integer.valueOf(newName));
-	}
-
+	/**
+	 * Updates the file at the specified index with new data.
+	 * @param index
+	 * @param data
+	 */
 	public void updateFile(int index, byte[] data) {
-		((ByteArray) files.get(index)).setBytes(data);
+		files.get(index).setData(data);
 	}
 
+	/**
+	 * Gets the index of the specified name.
+	 * @param name
+	 * @return
+	 */
 	public int indexOf(String name) {
-		return indexOf(getHash(name));
+		return indexOf(DataUtils.getHash(name));
 	}
 
+	/**
+	 * Gets the index of the specified hash.
+	 * @param hash
+	 * @return
+	 */
 	public int indexOf(int hash) {
-		return identifiers.indexOf(Integer.valueOf(hash));
+		for (int index = 0; index < totalFiles; index++) {
+			if (files.get(index).getHash() == hash) {
+				return index;
+			}
+		}
+		return 0;
 	}
 
+	/**
+	 * Removes the file at the specified index.
+	 * @param index
+	 */
 	public void removeFile(int index) {
 		files.remove(index);
-		identifiers.remove(index);
-		compressedSizes.remove(index);
-		decompressedSizes.remove(index);
-		totalFiles -= 1;
+		totalFiles--;
 	}
 
-	public void addFile(int identifier, byte[] data) {
-		identifiers.add(Integer.valueOf(identifier));
-		decompressedSizes.add(Integer.valueOf(data.length));
-		compressedSizes.add(Integer.valueOf(0));
-		files.add(new ByteArray(data));
-		totalFiles += 1;
+	/**
+	 * Adds a file that is given the specified hash and data.
+	 * @param hash
+	 * @param data
+	 */
+	public void addFile(int hash, byte[] data) {
+		files.add(new ArchiveFile(hash, data.length, 0, 0, new ByteArray(data), true));
+		totalFiles++;
 	}
 
-	public void addFileAt(int at, int identifier, byte[] data) {
-		identifiers.add(at, Integer.valueOf(identifier));
-		decompressedSizes.add(at, Integer.valueOf(data.length));
-		compressedSizes.add(at, Integer.valueOf(0));
-		files.add(at, new ByteArray(data));
-		totalFiles += 1;
+	/**
+	 * Adds a file at the specified index that is given the specified hash and data.
+	 * @param index
+	 * @param hash
+	 * @param data
+	 */
+	public void addFileAt(int index, int hash, byte[] data) {
+		files.add(index, new ArchiveFile(hash, data.length, 0, 0, new ByteArray(data), true));
+		totalFiles++;
 	}
 }

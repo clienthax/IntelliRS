@@ -1,65 +1,40 @@
 package rs2.util;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.zip.CRC32;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import rs2.util.io.bzip.CBZip2OutputStream;
+import rs2.io.bzip2.BZip2InputStream;
+import rs2.io.bzip2.BZip2OutputStream;
 
 public class DataUtils {
 
-	public static byte[] gzDecompress(byte[] b) throws IOException {
-		GZIPInputStream gzi = new GZIPInputStream(new ByteArrayInputStream(b));
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		byte[] buf = new byte[1024];
-		int len;
-		 while ((len = gzi.read(buf)) > 0) {
-			out.write(buf, 0, len);
-		}
-		out.close();
-		return out.toByteArray();
-	}
-
-	public static byte[] gzCompress(byte[] b) throws IOException {
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		GZIPOutputStream gzo = new GZIPOutputStream(bos);
-		gzo.write(b);
-		gzo.close();
-		bos.close();
-		return bos.toByteArray();
-	}
-
-	public static int getHash(String s) {
+	public static int getHash(String string) {
 		int identifier = 0;
-		s = s.toUpperCase();
-		for (int j = 0; j < s.length(); j++) {
-			 identifier = identifier * 61 + s.charAt(j) - 32;
+		string = string.toUpperCase();
+		for (int index = 0; index < string.length(); index++) {
+			identifier = (identifier * 61 + string.charAt(index)) - 32;
 		}
 		return identifier;
 	}
 
-	public static byte[] bz2Compress(byte[] b) throws IOException {
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		CBZip2OutputStream bzo = new CBZip2OutputStream(bos, 1);
-		bzo.write(b);
-		bzo.close();
-		return bos.toByteArray();
+	public static byte[] readFile(String file) throws IOException {
+		RandomAccessFile raf = new RandomAccessFile(new File(file), "r");
+		byte[] data = new byte[(int) raf.length()];
+		raf.readFully(data);
+		raf.close();
+		return data;
 	}
 
-	public static void writeFile(byte[] data, String fileName) {
+	public static void writeFile(String file, byte[] data) {
 		try {
 			if (data != null) {
-				OutputStream out = new FileOutputStream(fileName);
+				OutputStream out = new FileOutputStream(file);
 				out.write(data);
 				out.close();
 			}
@@ -67,103 +42,101 @@ public class DataUtils {
 			e.printStackTrace();
 		}
 	}
-
-	public static byte[] readFile(File f) throws IOException {
-		RandomAccessFile raf = new RandomAccessFile(f, "r");
-		byte[] data = new byte[(int)raf.length()];
-		raf.readFully(data);
-		raf.close();
-		return data;
+	/**
+	 * Compresses all data provided to headerless bz2 format
+	 *
+	 * @param data the data to compress
+	 * @return The compressed data
+	 * @throws IOException If there was an error compressing
+	 */
+	public static byte[] compressBZip2(byte[] data) {
+		/*try {
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			CBZip2OutputStream bzo = new CBZip2OutputStream(bos);
+			try {
+				bzo.write(data, 0, data.length);
+			} finally {
+				bzo.close();
+				bos.close();
+			}
+			return bos.toByteArray();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}*/
+		return compressBZip2(data, 0, data.length);
 	}
 
-	public static void writeCompressedFile(byte[] data, String name) {
+
+	/**
+	 * Compresses data provided between off + len to headerless bz2 format
+	 *
+	 * @param data the data to compress
+	 * @param off  offset to compress from
+	 * @param len  amount to compress
+	 * @return The compressed data
+	 * @throws IOException If there was an error compressing
+	 */
+	public static byte[] compressBZip2(byte[] data, int off, int len) {
 		try {
-			GZIPOutputStream out = new GZIPOutputStream(new FileOutputStream(name));
-			out.write(data);
-			out.close();
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			BZip2OutputStream bzo = new BZip2OutputStream(bos);
+			bzo.write(data, off, len);
+			bzo.close();
+			bos.close();
+			return bos.toByteArray();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return null;
 	}
 
-	public static int readJAGHash(String string) {
-		int id = 0;
-		string = string.toUpperCase();
-		for (int j = 0; j < string.length(); j++) {
-			id = (id * 61 + string.charAt(j)) - 32;
-		}
-		return id;
-	}
-
-	public static int getCRC(byte[] data) {
-		CRC32 crc = new CRC32();
-		crc.update(data);
-		return (int) crc.getValue();
-	}
-
-	public static byte[] gZipDecompress(byte[] b) throws IOException {
-		GZIPInputStream gzi = new GZIPInputStream(new ByteArrayInputStream(b));
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		byte[] buf = new byte[1024];
-		int len;
-		try {
-			while ((len = gzi.read(buf, 0, buf.length)) > 0) {
+	/**
+	 * Decompresses all headerless bz2 data provided
+	 *
+	 * @param data bz2 data to decompress
+	 * @return The decompressed data
+	 * @throws IOException If there was an error decompressing
+	 */
+	public static byte[] decompressBZip2(byte[] data) {
+		/*try {
+			CBZip2InputStream bzi = new CBZip2InputStream(new ByteArrayInputStream(data));
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			byte[] buf = new byte[1024];
+			int len;
+			while ((len = bzi.read(buf)) > 0) {
 				out.write(buf, 0, len);
 			}
-		} finally {
 			out.close();
-		}
-		return out.toByteArray();
+			return out.toByteArray();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}*/
+		return decompressBZip2(data, 0, data.length);
 	}
 
-	public static byte[] decompressGZip(byte[] b) throws IOException {
-		GZIPInputStream gzi = new GZIPInputStream(new ByteArrayInputStream(b));
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		byte[] buf = new byte[1024];
-		int len;
-		while ((len = gzi.read(buf)) > 0) {
-			out.write(buf, 0, len);
-		}
-		out.close();
-		return out.toByteArray();
-	}
-
-	public static byte[] unzip(byte[] data) throws IOException {
-		InputStream in = new ByteArrayInputStream(data);
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+	/**
+	 * Decompressed data provided between off + len from headerless bz2 format
+	 *
+	 * @param data the data to decompress
+	 * @param off  offset to decompress from
+	 * @param len  amount to decompress
+	 * @return The decompressed data
+	 * @throws IOException If there was an error decompressing
+	 */
+	public static byte[] decompressBZip2(byte[] data, int off, int len) {
 		try {
-			in = new GZIPInputStream(in);
-			byte[] buffer = new byte[65536];
-			int noRead;
-			while ((noRead = in.read(buffer)) != -1) {
-				out.write(buffer, 0, noRead);
+			byte[] dat = new byte[len];
+			System.arraycopy(data, off, dat, 0, len);
+			BZip2InputStream bzi = new BZip2InputStream(new ByteArrayInputStream(dat));
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			byte[] buf = new byte[1024];
+			int read;
+			while ((read = bzi.read(buf)) > 0) {
+				out.write(buf, 0, read);
 			}
-		} finally {
-			try {
-				out.close();
-			} catch (Exception e) {
-			}
-		}
-		return out.toByteArray();
-	}
-
-	public static byte[] readFile(String name) {
-		try {
-			RandomAccessFile raf = new RandomAccessFile(name, "r");
-			ByteBuffer buf = raf.getChannel().map(
-					FileChannel.MapMode.READ_ONLY, 0, raf.length());
-			try {
-				if (buf.hasArray()) {
-					return buf.array();
-				} else {
-					byte[] array = new byte[buf.remaining()];
-					buf.get(array);
-					return array;
-				}
-			} finally {
-				raf.close();
-			}
-		} catch (Exception e) {
+			out.close();
+			return out.toByteArray();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -186,26 +159,16 @@ public class DataUtils {
 		return null;
 	}
 
-	/**
-	 * Writes a string in the form of bytes that can be read by Jagex buffer methods.
-	 * @param dat output stream.
-	 * @param input input string.
-	 * @throws IOException
-	 */
-	public static void writeString(DataOutputStream dat, String input) throws IOException {
-		dat.write(input.getBytes());
-		dat.writeByte(10);
+	public static byte[] decompressGZip(byte[] b) throws IOException {
+		GZIPInputStream gzi = new GZIPInputStream(new ByteArrayInputStream(b));
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		byte[] buf = new byte[1024];
+		int len;
+		while ((len = gzi.read(buf)) > 0) {
+			out.write(buf, 0, len);
+		}
+		out.close();
+		return out.toByteArray();
 	}
 
-	/**
-	 * Writes 3 bytes(24 bits) to the output stream that can be read by Jagex buffer methods.
-	 * @param dat output stream.
-	 * @param i input value.
-	 * @throws IOException
-	 */
-	public static void write3Bytes(DataOutputStream dat, int i) throws IOException {
-		dat.write((byte) (i >> 16));
-		dat.write((byte) (i >> 8));
-		dat.write((byte) i);
-	}
 }

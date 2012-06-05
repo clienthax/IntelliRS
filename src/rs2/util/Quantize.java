@@ -1,4 +1,4 @@
-package rs2.util.io;
+package rs2.util;
 
 public class Quantize {
 

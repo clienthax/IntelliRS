@@ -5,7 +5,6 @@ import java.awt.event.KeyListener;
 
 import rs2.ActionHandler;
 import rs2.Main;
-import rs2.editor.RSInterface;
 
 public class MyKeyListener implements KeyListener {
 
@@ -16,7 +15,7 @@ public class MyKeyListener implements KeyListener {
 		switch (key) {
 			case KeyEvent.VK_S:
 				if (control) {
-					RSInterface.save();
+					Main.getInstance().recompile();
 				}
 				break;
 			case KeyEvent.VK_E:
