@@ -1,4 +1,4 @@
-package rs2.swing;
+package rs2.swing.impl;
 
 import java.awt.Component;
 

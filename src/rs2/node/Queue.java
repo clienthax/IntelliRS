@@ -9,8 +9,9 @@ public final class Queue {
 	}
 
 	public void insertHead(NodeSub nodeSub) {
-		if (nodeSub.nextNodeSub != null)
-			nodeSub.unlinkSub();
+		if (nodeSub.nextNodeSub != null) {
+			nodeSub.clear();
+		}
 		nodeSub.nextNodeSub = head.nextNodeSub;
 		nodeSub.prevNodeSub = head;
 		nodeSub.nextNodeSub.prevNodeSub = nodeSub;
@@ -22,7 +23,7 @@ public final class Queue {
 		if (nodeSub == head) {
 			return null;
 		} else {
-			nodeSub.unlinkSub();
+			nodeSub.clear();
 			return nodeSub;
 		}
 	}

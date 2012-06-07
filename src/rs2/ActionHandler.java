@@ -1,6 +1,9 @@
 package rs2;
 
+import javax.swing.JOptionPane;
+
 import rs2.graphics.RSImage;
+import rs2.rsinterface.RSInterface;
 import rs2.swing.UserInterface;
 import rs2.swing.edit.ImagePane;
 import rs2.swing.edit.TextPane;
@@ -9,6 +12,10 @@ import rs2.util.ArrayUtils;
 public class ActionHandler {
 
 	public static Main main;
+
+	public static int openInterface() {
+		return Integer.parseInt(JOptionPane.showInputDialog(null, "Please enter an interface id:", "Open Interface", JOptionPane.INFORMATION_MESSAGE));
+	}
 
 	public static int getSelectedIndex() {
 		if (Main.selectedId != -1) {
@@ -108,15 +115,10 @@ public class ActionHandler {
 		}
 	}
 
-	public static void lock() {
+	public static void toggleLock() {
 		if (Main.selectedId != -1) {
-			Main.getSelected().locked = true;
-		}
-	}
-
-	public static void unlock() {
-		if (Main.selectedId != -1) {
-			Main.getSelected().locked = false;
+			Main.getSelected().locked = !Main.getSelected().locked;
+			Main.getUI().rebuildTreeList();
 		}
 	}
 
@@ -143,11 +145,11 @@ public class ActionHandler {
 
 	public static void updateSprite(RSInterface rsi, boolean disabled) {
 		if (disabled) {
-			rsi.disabledSprite = new RSImage(Main.media, rsi.disabledSpriteName, rsi.disabledSpriteId);
+			rsi.disabledSprite = new RSImage(Main.media, rsi.disabledSpriteArchive, rsi.disabledSpriteId);
 			rsi.width = rsi.disabledSprite.myWidth;
 			rsi.height = rsi.disabledSprite.myHeight;
 		} else {
-			rsi.enabledSprite = new RSImage(Main.media, rsi.enabledSpriteName, rsi.enabledSpriteId);
+			rsi.enabledSprite = new RSImage(Main.media, rsi.enabledSpriteArchive, rsi.enabledSpriteId);
 			rsi.width = rsi.enabledSprite.myWidth;
 			rsi.height = rsi.enabledSprite.myHeight;
 		}

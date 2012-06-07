@@ -1,11 +1,7 @@
 package rs2.swing.edit;
 
-import java.awt.Component;
+import java.awt.BorderLayout;
 import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -17,162 +13,183 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SpringLayout;
 import javax.swing.border.TitledBorder;
 
 import rs2.ActionHandler;
 import rs2.Main;
-import rs2.RSInterface;
 import rs2.graphics.RSImage;
+import rs2.rsinterface.RSInterface;
+import rs2.swing.impl.RelativeLayout;
 
-@SuppressWarnings("serial")
-public class ImagePane extends JFrame implements ActionListener, ItemListener {
+public class ImagePane implements ActionListener, ItemListener {
+
+	public int gap = 5;
 
 	public ImagePane(RSInterface rsi) {
 		this.rsi = rsi;
-		setTitle("Image Editor - " + rsi.id);
-		setLayout(null);
-		buildPreviewPanel();
+		frame = new JFrame("Image Editor - " + rsi.id);
+		frame.setLayout(new RelativeLayout(0));
+		buildPreviewPanel(null);
 		addButtons();
-		setSize(getContainerWidth(this), getContainerHeight(this));
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		setLocationRelativeTo(null);
-		setVisible(true);
-		setResizable(false);
+		frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		frame.setVisible(true);
+		frame.setResizable(false);
+		frame.pack();
+		frame.setLocationRelativeTo(null);
+		frame.toFront();
 	}
 
-	public int getContainerWidth(Component component) {
-		Container container = null;
-		if (component instanceof JFrame) {
-			container = this.getContentPane();
-		} else {
-			container = (Container) component;
-		}
-		int width = 0;
-		for (int index = 0; index < container.getComponentCount(); index++) {
-			int offset = (container.getComponent(index).getX() + container.getComponent(index).getWidth());
-			if (offset > width) {
-				width = offset;
-			}
-		}
-		if (component == preview) {
-			width += preview.getInsets().left + preview.getInsets().right;
-		}
-		return width + (component == this ? getFrameInsets().left + getFrameInsets().right : 0);
-	}
-
-	public int getContainerHeight(Component component) {
-		Container container = null;
-		if (component instanceof JFrame) {
-			container = this.getContentPane();
-		} else {
-			container = (Container) component;
-		}
-		int height = 0;
-		for (int index = 0; index < container.getComponentCount(); index++) {
-			int offset = (container.getComponent(index).getY() + container.getComponent(index).getHeight());
-			if (offset > height) {
-				height = offset;
-			}
-		}
-		if (component == preview) {
-			height += preview.getInsets().top + preview.getInsets().bottom;
-		}
-		return height + (component == this ? getFrameInsets().top + getFrameInsets().bottom : 0);
-	}
-
-	public Insets getFrameInsets() {
-		return new Insets(30, 4, 4, 4);
-	}
-
-	public Dimension getOffset(Component component) {
-		return new Dimension(component.getX() + component.getWidth(), component.getY() + component.getHeight());
-	}
-
-	public int getTextWidth(Component component, String str) {
-		int width = 50;
-		Font font = component.getFont();
-		if (font != null) {
-			FontMetrics metrics = Main.getInstance().getMetrics(font);
-			if (str != null && metrics != null) {
-				width = metrics.stringWidth(str);
-			}
-		}
-		width += 16;
-		return width;
-	}
-
-	public void buildPreviewPanel() {
+	public void buildPreviewPanel(String name) {
 		if (rsi == null) {
 			return;
 		}
-		preview = new JPanel();
-		preview.setBorder(new TitledBorder("Preview"));
-		preview.setLayout(null);
-		addDisabledComponents(preview);
-		preview.setBounds(0, 0, getContainerWidth(preview), getContainerHeight(preview));
-		add(preview);
+		if (preview == null) {
+			preview = new JPanel(new BorderLayout());
+			preview.setBorder(new TitledBorder("Preview"));
+		}
+		if (disabledPanel == null) {
+			disabledPanel = new JPanel(new SpringLayout());
+		}
+		addPanel(disabledPanel, name);
+		if (rsi.enabledSprite != null) {
+			if (enabledPanel == null) {
+				enabledPanel = new JPanel(new SpringLayout());
+			}
+			addPanel(enabledPanel, name);
+		} else {
+			JButton button = new JButton("Set Enabled");
+			button.addActionListener(this);
+			
+		}
+		if (!rebuilding) {
+			frame.add(preview, RelativeLayout.DEFAULT);
+		}
+	}
+
+	public void addPanel(Container parent, String name) {
+		boolean disabled = parent == disabledPanel;
+		JComboBox<String> archiveBox = disabled ? disabledArchive : enabledArchive;
+		JComboBox<Integer> indexBox = disabled ? disabledIndex : enabledIndex;
+		JLabel imageLabel = disabled ? disabledLabel : enabledLabel;
+		String archiveName = disabled ? "disabled archive" : "enabled archive";
+		String indexName = disabled ? "disabled index" : "enabled index";
+		String archive;
+		int selected;
+		RSImage image;
+		if (rebuilding) {
+			archive = archiveBox.getSelectedItem().toString();
+			selected = name.equals(archiveName) ? 0 : indexBox.getSelectedIndex();
+			image = new RSImage(Main.media, archive, selected);
+		} else {
+			archive = disabled ? rsi.disabledSpriteArchive : rsi.enabledSpriteArchive;
+			selected = disabled ? rsi.disabledSpriteId : rsi.enabledSpriteId;
+			image = disabled ? rsi.disabledSprite : rsi.enabledSprite;
+		}
+		int count = Main.getInstance().mediaArchive.archiveToRSImages(archive + ".dat").length;
+		String[] list = Main.getInstance().mediaArchive.getArchiveList();
+		
+		if (archiveBox == null) {
+			archiveBox = new JComboBox<String>();
+			archiveBox.setName(archiveName);
+			for (String item : list) {
+				archiveBox.addItem(item.replace(".dat", ""));
+			}
+			archiveBox.setSelectedItem(archive);
+			archiveBox.addItemListener(this);
+		}
+
+		if (indexBox == null) {
+			indexBox = new JComboBox<Integer>();
+			indexBox.setName(indexName);
+			for (int index = 0; index < count; index++) {
+				indexBox.addItem(index);
+			}
+			indexBox.setSelectedItem(selected);
+			indexBox.addItemListener(this);
+		}
+		if (indexBox != null && name != null && name.equals(archiveName) && rebuilding) {
+			indexBox.removeAllItems();
+			for (int index = 0; index < count; index++) {
+				indexBox.addItem(index);
+			}
+			indexBox.setSelectedItem(selected);
+		}
+
+		ImageIcon labelImage = new ImageIcon(image.getImage());
+		if (imageLabel != null && rebuilding) {
+			labelImage.getImage().flush();
+			imageLabel.setIcon(labelImage);
+		} else {
+			imageLabel = new JLabel(labelImage);
+		}
+
+		archiveBox.setMaximumSize(archiveBox.getMinimumSize());
+		indexBox.setMaximumSize(indexBox.getMinimumSize());
+		SpringLayout layout = (SpringLayout) parent.getLayout();
+		if (!rebuilding) {
+			layout.putConstraint(SpringLayout.NORTH, parent, gap, SpringLayout.NORTH, frame);
+			layout.putConstraint(SpringLayout.WEST, parent, gap, SpringLayout.WEST, frame);
+			layout.putConstraint(SpringLayout.WEST, archiveBox, gap, SpringLayout.WEST, parent);
+			layout.putConstraint(SpringLayout.NORTH, archiveBox, gap, SpringLayout.NORTH, parent);
+			parent.add(archiveBox);
+			layout.putConstraint(SpringLayout.WEST, indexBox, gap, SpringLayout.EAST, archiveBox);
+			layout.putConstraint(SpringLayout.NORTH, indexBox, 0, SpringLayout.NORTH, archiveBox);
+			parent.add(indexBox);
+			layout.putConstraint(SpringLayout.WEST, imageLabel, gap, SpringLayout.WEST, parent);
+			layout.putConstraint(SpringLayout.NORTH, imageLabel, gap, SpringLayout.SOUTH, archiveBox);
+			parent.add(imageLabel);
+			layout.putConstraint(SpringLayout.EAST, parent, gap, SpringLayout.EAST, indexBox);
+			layout.putConstraint(SpringLayout.SOUTH, parent, gap, SpringLayout.SOUTH, imageLabel);
+		} else {
+			int indexPos = indexBox.getX() + indexBox.getWidth();
+			int labelPos = imageLabel.getX() + image.myWidth;
+			layout.putConstraint(SpringLayout.EAST, parent, gap, SpringLayout.EAST, indexPos > labelPos ? indexBox : imageLabel);
+		}
+		if (!rebuilding) {
+			preview.add(parent, parent == disabledPanel ? BorderLayout.NORTH : BorderLayout.SOUTH);
+		}
+		if (disabled) {
+			disabledArchive = archiveBox;
+			disabledIndex = indexBox;
+			disabledLabel = imageLabel;
+		} else {
+			enabledArchive = archiveBox;
+			enabledIndex = indexBox;
+			enabledLabel = imageLabel;
+		}
 	}
 
 	public void addButtons() {
+		if (save == null) {
+			save = new JButton("Save");
+			save.addActionListener(this);
+		}
+		if (cancel == null) {
+			cancel = new JButton("Cancel");
+			cancel.addActionListener(this);
+		}
+		if (!rebuilding) {
+			buttonPanel = new JPanel();
+		} else {
+			frame.remove(buttonPanel);
+		}
+		if (!rebuilding) {
+			buttonPanel.add(save);
+			buttonPanel.add(cancel);
+		}
+		frame.add(buttonPanel, RelativeLayout.BOTTOM_CENTER);
+	}
+
+	public void rebuildPane(String name) {
 		if (rebuilding) {
-			remove(save);
+			return;
 		}
-		int width = 100;
-		int height = 20;
-		int centerX = getContainerWidth(this) / 2;
-		int y = getContainerHeight(this) - (getFrameInsets().top + getFrameInsets().bottom);
-		save = new JButton("Save");
-		save.addActionListener(this);
-		save.setBounds(centerX - (width / 2), y, width, height);
-		add(save);
-	}
-
-	public void addDisabledComponents(JPanel parent) {
-		int startX = 12;
-		int startY = 20;
-		int x = startX;
-		int y = startY;
-		int archiveIndex = Main.getInstance().mediaArchive.getIndexForName(rsi.disabledSpriteName + ".dat");
-		int selectedIndex = rsi.disabledSpriteId;
-		RSImage[] images = Main.getInstance().mediaArchive.archiveToRSImages(rsi.disabledSpriteName + ".dat");
-		/* The disabled sprite archive dropdown box */
-		disabledArchive = new JComboBox();
-		disabledArchive.addItemListener(this);
-		String[] list = Main.getInstance().mediaArchive.getArchiveList();
-		for (String item : list) {
-			disabledArchive.addItem(item.replace(".dat", ""));
-		}
-		disabledArchive.setSelectedIndex(archiveIndex);
-		disabledArchive.setBounds(x, y, 120, 20);
-		parent.add(disabledArchive);
-		/* The disabled sprite index dropdown box */
-		disabledIndex = new JComboBox();
-		disabledIndex.addItemListener(this);
-		for (int index = 0; index < images.length; index++) {
-			disabledIndex.addItem(index);
-		}
-		disabledIndex.setSelectedIndex(selectedIndex);
-		disabledIndex.setBounds((int) getOffset(disabledArchive).getWidth() + 5, y, 50, 20);
-		parent.add(disabledIndex);
-		/* The disabled sprite image label */
-		disabledLabel = new JLabel(new ImageIcon(images[selectedIndex].getImage()));
-		disabledLabel.setBounds(x, (int) getOffset(disabledArchive).getHeight() + 5, images[selectedIndex].myWidth, images[selectedIndex].myHeight);
-		parent.add(disabledLabel);
-	}
-
-	public void rebuildPane() {
 		rebuilding = true;
-		if (preview != null) {
-			preview.setSize(getContainerWidth(preview), getContainerHeight(preview));
-			preview.repaint();
-		}
-		if (save != null) {
-			addButtons();
-		}
-		if (this != null) {
-			this.setSize(getContainerWidth(this), getContainerHeight(this));
-			this.repaint();
-		}
+		buildPreviewPanel(name);
+		addButtons();
+		frame.setVisible(true);
+		frame.pack();
 		rebuilding = false;
 	}
 
@@ -180,13 +197,13 @@ public class ImagePane extends JFrame implements ActionListener, ItemListener {
 		if (rsi == null) {
 			return;
 		}
-		if (!rsi.disabledSpriteName.equalsIgnoreCase(disabledArchive.getSelectedItem().toString())) {
-			rsi.disabledSpriteName = disabledArchive.getSelectedItem().toString();
+		if (!rsi.disabledSpriteArchive.equalsIgnoreCase(disabledArchive.getSelectedItem().toString())) {
+			rsi.disabledSpriteArchive = disabledArchive.getSelectedItem().toString();
 			rsi.disabledSpriteId = disabledIndex.getSelectedIndex();
 			ActionHandler.updateSprite(rsi, true);
 		}
 		if (rsi.disabledSpriteId != disabledIndex.getSelectedIndex()) {
-			rsi.disabledSpriteName = disabledArchive.getSelectedItem().toString();
+			rsi.disabledSpriteArchive = disabledArchive.getSelectedItem().toString();
 			rsi.disabledSpriteId = disabledIndex.getSelectedIndex();
 			ActionHandler.updateSprite(rsi, true);
 		}
@@ -198,10 +215,10 @@ public class ImagePane extends JFrame implements ActionListener, ItemListener {
 		if (cmd != null) {
 			if (cmd.equals("save")) {
 				save();
-				dispose();
+				frame.dispose();
 			}
 			if (cmd.equals("cancel")) {
-				dispose();
+				frame.dispose();
 			}
 		}
 	}
@@ -209,53 +226,20 @@ public class ImagePane extends JFrame implements ActionListener, ItemListener {
 	@Override
 	public void itemStateChanged(ItemEvent event) {
 		Object source = event.getSource();
-		if (source == disabledArchive) {
-			if (disabledLabel != null) {
-				Container parent = disabledLabel.getParent();
-				String archive = disabledArchive.getSelectedItem().toString();
-				int selected = disabledIndex.getSelectedIndex();
-				//rebuild the index combobox
-				disabledIndex.removeAllItems();
-				int indexCount = Main.getInstance().mediaArchive.archiveToRSImages(archive + ".dat").length;
-				for (int index = 0; index < indexCount; index++) {
-					disabledIndex.addItem(index);
-				}
-				disabledIndex.setSelectedIndex(0);
-				disabledIndex.repaint();
-				//rebuilding the image label
-				parent.remove(disabledLabel);
-				RSImage image = new RSImage(Main.media, archive, selected);
-				disabledLabel = new JLabel(new ImageIcon(image.getImage()));
-				disabledLabel.setBounds(12, (int) getOffset(disabledArchive).getHeight() + 5, image.myWidth, image.myHeight);
-				parent.add(disabledLabel);
-				parent.repaint();
-				rebuildPane();
-			}
-		}
-		if (source == disabledIndex) {
-			if (disabledLabel != null) {
-				Container parent = disabledLabel.getParent();
-				String archive = disabledArchive.getSelectedItem().toString();
-				int selected = disabledIndex.getSelectedIndex();
-				//rebuild the image label
-				parent.remove(disabledLabel);
-				RSImage image = new RSImage(Main.media, archive, selected);
-				disabledLabel = new JLabel(new ImageIcon(image.getImage()));
-				disabledLabel.setBounds(12, (int) getOffset(disabledArchive).getHeight() + 5, image.myWidth, image.myHeight);
-				parent.add(disabledLabel);
-				parent.repaint();
-				rebuildPane();
-			}
+		if (source instanceof JComboBox) {
+			String name = ((JComboBox<?>) source).getName();
+			rebuildPane(name);
 		}
 	}
 
 	public boolean rebuilding = false;
-	public RSInterface rsi;
-	public JPanel preview;
-	public JLabel disabledLabel;
-	public JComboBox disabledArchive;
-	public JComboBox disabledIndex;
-	public JButton save;
-	public JButton cancel;
+	public RSInterface rsi = null;
+	public JFrame frame = null;
+	public JPanel preview = null, buttonPanel = null, disabledPanel = null, enabledPanel = null;
+	public JLabel disabledLabel = null, enabledLabel = null;
+	public JComboBox<String> disabledArchive = null, enabledArchive = null;
+	public JComboBox<Integer> disabledIndex = null, enabledIndex = null;
+	public JButton save = null;
+	public JButton cancel = null;
 
 }

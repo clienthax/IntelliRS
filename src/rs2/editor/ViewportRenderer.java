@@ -5,11 +5,11 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 
 import rs2.Main;
-import rs2.RSInterface;
 import rs2.Settings;
 import rs2.constants.Constants;
 import rs2.graphics.RSDrawingArea;
 import rs2.graphics.RSImage;
+import rs2.rsinterface.RSInterface;
 
 public class ViewportRenderer {
 

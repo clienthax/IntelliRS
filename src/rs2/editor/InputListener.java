@@ -2,9 +2,9 @@ package rs2.editor;
 
 import rs2.ActionHandler;
 import rs2.Main;
-import rs2.RSInterface;
 import rs2.Settings;
 import rs2.listeners.ClickType;
+import rs2.rsinterface.RSInterface;
 
 public class InputListener {
 

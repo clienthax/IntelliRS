@@ -24,6 +24,7 @@ import rs2.graphics.RealFont;
 import rs2.listeners.ClickType;
 import rs2.listeners.impl.MyKeyListener;
 import rs2.listeners.impl.MyMouseListener;
+import rs2.rsinterface.RSInterface;
 import rs2.swing.UserInterface;
 
 @SuppressWarnings("serial")
@@ -166,6 +167,9 @@ public class Main extends Canvas implements Runnable {
 	 * @return
 	 */
 	public static int getSelectedIndex() {
+		if (getSelected() == null) {
+			return -1;
+		}
 		RSInterface parent = getInterface();
 		if (parent.children == null) {
 			return -1;
@@ -478,12 +482,7 @@ public class Main extends Canvas implements Runnable {
 						ActionHandler.setZIndex(getInterface().children.length - 1);
 						break;
 					case 5:
-						if (getSelected().locked) {
-							ActionHandler.unlock();
-						} else {
-							ActionHandler.lock();
-						}
-						getUI().rebuildTreeList();
+						ActionHandler.toggleLock();
 						break;
 					case 6:
 						ActionHandler.edit(getSelected());
@@ -1428,6 +1427,7 @@ public class Main extends Canvas implements Runnable {
 			updateProgress("Unpacking interfaces...", 75);
 			RSFont fonts[] = { small, regular, bold, fancy };
 			RSInterface.load(interfaces, media, fonts);
+			RSInterface.createBackup();
 			mediaArchive.updateKnown();
 			updateProgress("Complete!", 100);
 		} catch(Exception e) {

@@ -19,8 +19,6 @@ import javax.swing.JFrame;
 import javax.swing.JInternalFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.UIManager;
@@ -31,10 +29,13 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import rs2.ActionHandler;
 import rs2.Main;
-import rs2.RSInterface;
 import rs2.Settings;
 import rs2.constants.Constants;
+import rs2.rsinterface.RSInterface;
+import rs2.swing.impl.CellRenderer;
+import rs2.util.SwingUtils;
 
 public class UserInterface extends Main implements ActionListener, TreeSelectionListener {
 
@@ -43,24 +44,20 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public static JMenuBar menuBar;
-	public static JMenu fileMenu;
 	public static JFrame frame;
 	public static JInternalFrame viewport;
 	public static JInternalFrame treePane;
 	public static JDesktopPane desktop;
-	public static JCheckBox displayGrid;
-	public static JCheckBox displayData;
-	public static JCheckBox displayHover;
-	public static JCheckBox forceEnabled;
+	public JCheckBox displayGrid;
+	public JCheckBox displayData;
+	public JCheckBox displayHover;
+	public JCheckBox forceEnabled;
 	public static JTree tree;
 	public static JScrollPane treeScroll;
 	public static DefaultTreeModel treeModel;
 
 	public UserInterface() {
-		//super();
 		try {
-			//UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			UIManager.setLookAndFeel("org.jvnet.substance.skin.SubstanceRavenGraphiteGlassLookAndFeel");
 	        JFrame.setDefaultLookAndFeelDecorated(true);
 	        JDialog.setDefaultLookAndFeelDecorated(true);
@@ -86,10 +83,9 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 			viewport.setSize(765 + 8, 503 + 34);
 			desktop.add(viewport);
 			frame.getContentPane().add(desktop, BorderLayout.CENTER);
-			initMenuBar();
-			frame.setSize(new Dimension(width + insets.left + insets.right, height + insets.top + insets.bottom + menuBar.getHeight()));
+			buildMenuBar();
+			frame.setMinimumSize(new Dimension(width, height));
 			frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
-			//frame.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - width) / 2, (Toolkit.getDefaultToolkit().getScreenSize().height - height) / 2);
 			frame.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 			frame.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, Collections.EMPTY_SET);
 			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -100,6 +96,32 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public void buildMenuBar() {
+		JMenuBar menuBar = new JMenuBar();
+		String[] items = { "Open Interface", "Save", "-", "Import", "Export->", "-", "About", "Exit" };
+		String[] exportItems = { "Current", "Selected" };
+		JMenu menu = SwingUtils.buildMenu("File", items, exportItems);
+		displayGrid = new JCheckBox("Show grid");
+		displayGrid.addActionListener(SwingUtils.actionListener);
+		displayGrid.setSelected(Settings.displayGrid);
+		displayData = new JCheckBox("Show data");
+		displayData.addActionListener(SwingUtils.actionListener);
+		displayData.setSelected(Settings.displayData);
+		displayHover = new JCheckBox("Hover highlight");
+		displayHover.addActionListener(SwingUtils.actionListener);
+		displayHover.setSelected(Settings.displayHover);
+		forceEnabled = new JCheckBox("Force enabled");
+		forceEnabled.addActionListener(SwingUtils.actionListener);
+		forceEnabled.setSelected(Settings.forceEnabled);
+		menuBar.add(menu);
+		menuBar.add(Box.createHorizontalGlue());
+		menuBar.add(displayGrid);
+		menuBar.add(displayData);
+		menuBar.add(displayHover);
+		menuBar.add(forceEnabled);
+		frame.getContentPane().add(menuBar, BorderLayout.NORTH);
 	}
 
 	public DefaultMutableTreeNode getTreeList() {
@@ -116,10 +138,8 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 							RSInterface rsi_2 = RSInterface.cache[rsi_1.children[childIndex]];
 							DefaultMutableTreeNode child2 = new DefaultMutableTreeNode(Integer.toString(rsi_1.children[childIndex]) + " - " + getType(rsi_2.id, rsi_2.type));
 							treeModel.insertNodeInto(child2, child, childIndex);
-							//child.add(child2);
 						}
 					}
-					//parent.add(child);
 				}
 			}
 		}
@@ -132,12 +152,6 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		tree.addTreeSelectionListener(this);
 		tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 		tree.setCellRenderer(new CellRenderer());
-	}
-
-	protected boolean isLocked(Object value) {
-		int id = Integer.parseInt(value.toString().split(" ")[0]);
-		Main.selectedId = id;
-		return Main.getSelected().locked;
 	}
 
 	public void rebuildTreeList() {
@@ -177,40 +191,6 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		}
 	}
 
-	public void initMenuBar() {
-		menuBar = new JMenuBar();
-		fileMenu = new JMenu("File");
-		String[] fileMenuItems = { "Open Interface", "Save", "-", "Exit" };
-		for(String name : fileMenuItems) {
-			if (name.equals("-")) {
-				fileMenu.addSeparator();
-			} else {
-				JMenuItem fileMenuItem = new JMenuItem(name);
-				fileMenuItem.addActionListener(this);
-				fileMenu.add(fileMenuItem);
-			}
-		}
-		displayGrid = new JCheckBox("Show grid");
-		displayGrid.addActionListener(this);
-		displayGrid.setSelected(Settings.displayGrid);
-		displayData = new JCheckBox("Show data");
-		displayData.addActionListener(this);
-		displayData.setSelected(Settings.displayData);
-		displayHover = new JCheckBox("Hover highlight");
-		displayHover.addActionListener(this);
-		displayHover.setSelected(Settings.displayHover);
-		forceEnabled = new JCheckBox("Force enabled");
-		forceEnabled.addActionListener(this);
-		forceEnabled.setSelected(Settings.forceEnabled);
-		menuBar.add(fileMenu);
-		menuBar.add(Box.createHorizontalGlue());
-		menuBar.add(displayGrid);
-		menuBar.add(displayData);
-		menuBar.add(displayHover);
-		menuBar.add(forceEnabled);
-		frame.getContentPane().add(menuBar, BorderLayout.NORTH);
-	}
-
 	@SuppressWarnings("unused")
 	private static void openURL(String url) {
 		Desktop d = Desktop.getDesktop();
@@ -225,7 +205,7 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		try {
 			if(cmd != null) {
 				if (cmd.equals("open interface")) {
-					selectInterface(Integer.parseInt(JOptionPane.showInputDialog(null, "Please enter an interface id:", "Open Interface", JOptionPane.INFORMATION_MESSAGE)));
+					selectInterface(ActionHandler.openInterface());
 				}
 				if (cmd.equals("show grid")) {
 					Settings.displayGrid = displayGrid.isSelected();

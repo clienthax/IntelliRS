@@ -20,7 +20,7 @@ import javax.swing.JTextField;
 import javax.swing.border.TitledBorder;
 
 import rs2.Main;
-import rs2.RSInterface;
+import rs2.rsinterface.RSInterface;
 import rs2.util.Utils;
 
 @SuppressWarnings("serial")

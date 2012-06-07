@@ -10,8 +10,8 @@ public final class MemCache {
 		hashTable = new HashTable();
 	}
 
-	public NodeSub get(long l) {
-		NodeSub nodeSub = (NodeSub) hashTable.findNodeByID(l);
+	public NodeSub get(long id) {
+		NodeSub nodeSub = (NodeSub) hashTable.getNodeForId(id);
 		if (nodeSub != null) {
 			queue.insertHead(nodeSub);
 		}
@@ -23,30 +23,30 @@ public final class MemCache {
 			if (spaceLeft == 0) {
 				NodeSub nodeSub_1 = queue.popTail();
 				nodeSub_1.remove();
-				nodeSub_1.unlinkSub();
+				nodeSub_1.clear();
 				if (nodeSub_1 == emptyNodeSub) {
 					NodeSub nodeSub_2 = queue.popTail();
 					nodeSub_2.remove();
-					nodeSub_2.unlinkSub();
+					nodeSub_2.clear();
 				}
 			} else {
 				spaceLeft--;
 			}
-			hashTable.removeFromCache(nodeSub, l);
+			hashTable.remove(nodeSub, l);
 			queue.insertHead(nodeSub);
 			return;
-		} catch (RuntimeException runtimeexception) {
-			System.out.println("47547, " + nodeSub + ", " + l + ", " + (byte) 2 + ", " + runtimeexception.toString());
+		} catch (RuntimeException e) {
+			System.out.println("47547, " + nodeSub + ", " + l + ", " + (byte) 2 + ", " + e.toString());
 		}
 		throw new RuntimeException();
 	}
 
-	public void unlinkAll() {
+	public void clear() {
 		do {
 			NodeSub nodeSub = queue.popTail();
 			if (nodeSub != null) {
 				nodeSub.remove();
-				nodeSub.unlinkSub();
+				nodeSub.clear();
 			} else {
 				spaceLeft = initialCount;
 				return;

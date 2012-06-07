@@ -18,6 +18,11 @@ public class MyKeyListener implements KeyListener {
 					Main.getInstance().recompile();
 				}
 				break;
+			case KeyEvent.VK_O:
+				if (control) {
+					Main.getInstance().selectInterface(ActionHandler.openInterface());
+				}
+				break;
 			case KeyEvent.VK_E:
 			case KeyEvent.VK_ALT:
 				if (control && key == KeyEvent.VK_E) {
@@ -56,9 +61,7 @@ public class MyKeyListener implements KeyListener {
 				break;
 			case KeyEvent.VK_L:
 				if (control){
-					if (Main.getSelected() != null) {
-						Main.getSelected().locked = !Main.getSelected().locked;
-					}
+					ActionHandler.toggleLock();
 				}
 				break;
 		}

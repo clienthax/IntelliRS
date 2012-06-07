@@ -14,6 +14,11 @@ import rs2.io.bzip2.BZip2OutputStream;
 
 public class DataUtils {
 
+	/**
+	 * Generates a Jagex hash for the specified string.
+	 * @param string
+	 * @return
+	 */
 	public static int getHash(String string) {
 		int identifier = 0;
 		string = string.toUpperCase();
@@ -23,14 +28,29 @@ public class DataUtils {
 		return identifier;
 	}
 
-	public static byte[] readFile(String file) throws IOException {
-		RandomAccessFile raf = new RandomAccessFile(new File(file), "r");
-		byte[] data = new byte[(int) raf.length()];
-		raf.readFully(data);
-		raf.close();
-		return data;
+	/**
+	 * Reads the specified file and returns it's data as a byte array.
+	 * @param file
+	 * @return
+	 */
+	public static byte[] readFile(String file) {
+		try {
+			RandomAccessFile raf = new RandomAccessFile(new File(file), "r");
+			byte[] data = new byte[(int) raf.length()];
+			raf.readFully(data);
+			raf.close();
+			return data;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
+	/**
+	 * Writes data to the specified file.
+	 * @param file
+	 * @param data
+	 */
 	public static void writeFile(String file, byte[] data) {
 		try {
 			if (data != null) {
@@ -50,19 +70,6 @@ public class DataUtils {
 	 * @throws IOException If there was an error compressing
 	 */
 	public static byte[] compressBZip2(byte[] data) {
-		/*try {
-			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			CBZip2OutputStream bzo = new CBZip2OutputStream(bos);
-			try {
-				bzo.write(data, 0, data.length);
-			} finally {
-				bzo.close();
-				bos.close();
-			}
-			return bos.toByteArray();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}*/
 		return compressBZip2(data, 0, data.length);
 	}
 
@@ -98,19 +105,6 @@ public class DataUtils {
 	 * @throws IOException If there was an error decompressing
 	 */
 	public static byte[] decompressBZip2(byte[] data) {
-		/*try {
-			CBZip2InputStream bzi = new CBZip2InputStream(new ByteArrayInputStream(data));
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			byte[] buf = new byte[1024];
-			int len;
-			while ((len = bzi.read(buf)) > 0) {
-				out.write(buf, 0, len);
-			}
-			out.close();
-			return out.toByteArray();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}*/
 		return decompressBZip2(data, 0, data.length);
 	}
 

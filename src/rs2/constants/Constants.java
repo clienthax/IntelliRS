@@ -32,6 +32,8 @@ public class Constants {
 	 */
 	public static final String SETTINGS_FILE_NAME = "settings.gcl";
 
+	public static final String INTERFACE_FILE_EXTENSION = ".rsi";
+
 	/**
 	 * The maximum memory usage the program can consume.
 	 * Most clients should consume no more than 130,000,000 to 230,000,00.
@@ -40,6 +42,7 @@ public class Constants {
 
 	/**
 	 * Returns the cache directory.
+	 * @return
 	 */
 	public static final String getCacheDirectory() {
 		return "cache" + System.getProperty("file.separator");
@@ -47,6 +50,7 @@ public class Constants {
 
 	/**
 	 * Returns the image directory.
+	 * @return
 	 */
 	public static final String getImageDirectory() {
 		return "img" + System.getProperty("file.separator");
@@ -54,8 +58,25 @@ public class Constants {
 
 	/**
 	 * Returns the working directory.
+	 * @return
 	 */
 	public static final String getWorkingDirectory() {
 		return System.getenv("APPDATA") + System.getProperty("file.separator") + "." + NAME.toLowerCase() + System.getProperty("file.separator");
+	}
+
+	/**
+	 * Returns the export directory.
+	 * @return
+	 */
+	public static String getExportDirectory() {
+		return "export" + System.getProperty("file.separator");
+	}
+
+	/**
+	 * Returns the import directory.
+	 * @return
+	 */
+	public static String getImportDirectory() {
+		return "import" + System.getProperty("file.separator");
 	}
 }
