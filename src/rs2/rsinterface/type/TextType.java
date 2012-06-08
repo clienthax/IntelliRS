@@ -11,7 +11,6 @@ public class TextType extends RSInterface {
 	}
 
 	public TextType(int parentId, int actionType, int contentType, byte alpha, int hoverId, boolean centered, int fontId, boolean shadowed, String disabledText, int disabledColor) {
-		new RSInterface();
 		this.parentId = parentId;
 		this.type = 4;
 		this.actionType = actionType;
