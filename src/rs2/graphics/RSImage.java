@@ -827,8 +827,8 @@ public final class RSImage extends RSDrawingArea {
 	public int myPixels[];
 	public int myWidth;
 	public int myHeight;
-	private int offsetX;
-	private int offsetY;
+	public int offsetX;
+	public int offsetY;
 	public int maxWidth;
 	public int maxHeight;
 }

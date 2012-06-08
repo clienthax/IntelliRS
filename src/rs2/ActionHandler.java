@@ -7,7 +7,6 @@ import rs2.rsinterface.RSInterface;
 import rs2.swing.UserInterface;
 import rs2.swing.edit.ImagePane;
 import rs2.swing.edit.TextPane;
-import rs2.util.ArrayUtils;
 
 public class ActionHandler {
 
@@ -21,8 +20,8 @@ public class ActionHandler {
 		if (Main.selectedId != -1) {
 			RSInterface rsi = Main.getInterface();
 			if (rsi.children != null) {
-				for (int index = 0; index < rsi.children.length; index++) {
-					if (rsi.children[index] == Main.selectedId) {
+				for (int index = 0; index < rsi.children.size(); index++) {
+					if (rsi.children.get(index) == Main.selectedId) {
 						return index;
 					}/* else {
 						RSInterface child = RSInterface.cache[rsi.children[index]];
@@ -47,7 +46,7 @@ public class ActionHandler {
 			RSInterface rsi = Main.getInterface();
 			if (rsi != null) {
 				if (rsi.children != null) {
-					rsi.childX[getSelectedIndex()] += x;
+					rsi.childX.set(getSelectedIndex(), rsi.childX.get(getSelectedIndex()) + x);
 				}
 			}
 		}
@@ -58,7 +57,7 @@ public class ActionHandler {
 			RSInterface rsi = Main.getInterface();
 			if (rsi != null) {
 				if (rsi.children != null) {
-					rsi.childY[getSelectedIndex()] += y;
+					rsi.childY.set(getSelectedIndex(), rsi.childY.get(getSelectedIndex()) + y);
 				}
 			}
 		}
@@ -69,7 +68,7 @@ public class ActionHandler {
 			RSInterface rsi = Main.getInterface();
 			if (rsi != null) {
 				if (rsi.children != null) {
-					rsi.childX[getSelectedIndex()] = x;
+					rsi.childX.set(getSelectedIndex(), x);
 				}
 			}
 		}
@@ -80,7 +79,7 @@ public class ActionHandler {
 			RSInterface rsi = Main.getInterface();
 			if (rsi != null) {
 				if (rsi.children != null) {
-					rsi.childY[getSelectedIndex()] = y;
+					rsi.childY.set(getSelectedIndex(), y);
 				}
 			}
 		}
@@ -91,9 +90,9 @@ public class ActionHandler {
 			RSInterface rsi = Main.getInterface();
 			if (rsi.children != null) {
 				int index = getSelectedIndex();
-				rsi.children = ArrayUtils.remove(rsi.children, index);
-				rsi.childX = ArrayUtils.remove(rsi.childX, index);
-				rsi.childY = ArrayUtils.remove(rsi.childY, index);
+				rsi.children.remove(index);
+				rsi.childX.remove(index);
+				rsi.childY.remove(index);
 			}
 			UserInterface.ui.rebuildTreeList();
 		}
@@ -107,9 +106,18 @@ public class ActionHandler {
 			RSInterface rsi = Main.getInterface();
 			if (rsi.children != null) {
 				int selected = getSelectedIndex();
-				rsi.children = ArrayUtils.setZOrder(rsi.children, selected, index);
-				rsi.childX = ArrayUtils.setZOrder(rsi.childX, selected, index);
-				rsi.childY = ArrayUtils.setZOrder(rsi.childY, selected, index);
+				int id = rsi.children.get(selected);
+				int x = rsi.childX.get(selected);
+				int y = rsi.childY.get(selected);
+				rsi.children.remove(selected);
+				rsi.children.add(index, id);
+				rsi.childX.remove(selected);
+				rsi.childX.add(index, x);
+				rsi.childY.remove(selected);
+				rsi.childY.add(index, y);
+				//rsi.children = ArrayUtils.setZOrder(rsi.children, selected, index);
+				////rsi.childX = ArrayUtils.setZOrder(rsi.childX, selected, index);
+				//rsi.childY = ArrayUtils.setZOrder(rsi.childY, selected, index);
 			}
 			UserInterface.ui.rebuildTreeList();
 		}

@@ -26,31 +26,94 @@ import rs2.listeners.impl.MyKeyListener;
 import rs2.listeners.impl.MyMouseListener;
 import rs2.rsinterface.RSInterface;
 import rs2.swing.UserInterface;
+import rs2.swing.impl.JAGFileFilter;
+import rs2.util.DataUtils;
+import rs2.util.SwingUtils;
 
 @SuppressWarnings("serial")
 public class Main extends Canvas implements Runnable {
 
 	/**
-	 * Recompiles the data.dat file and the interface archive.
+	 * Recompiles the specified archive and rebuilds the cache.
 	 */
-	public void recompile() {
-		saving = true;
+	public void updateArchive(Archive archive) {
+		dull = true;
 		CacheIndice indice = cache.getIndice(0);
 		try {
-			byte[] interfaceData = RSInterface.getData();
-			interfaces.updateFile(interfaces.indexOf("data"), interfaceData);
-			byte[] data = interfaces.recompile();
-			indice.updateFile(3, data);
+			if (archive == interfaces) {
+				byte[] interfaceData = RSInterface.getData();
+				archive.updateFile(archive.indexOf("data"), interfaceData);
+				byte[] data = archive.recompile();
+				indice.updateFile(3, data);
+			}
+			if (archive == media) {
+				byte[] data = mediaArchive.imageArchive.repackArchive();
+				indice.updateFile(4, data);
+			}
 			cache.rebuildCache();
-			//rs2.util.DataUtils.writeFile(Constants.getCacheDirectory() + "data", interfaceData);
-			//rs2.util.DataUtils.writeFile(Constants.getCacheDirectory() + "interface.jag", data);
-			JOptionPane.showMessageDialog(this, "Interface archive repacked successfully.");
-			saving = false;
+			JOptionPane.showMessageDialog(this, "Archive repacked successfully.");
 		} catch (Exception e) {
-			JOptionPane.showMessageDialog(this, "An error occurred while repacking the interface archive.");
-			saving = false;
+			JOptionPane.showMessageDialog(this, "An error occurred while repacking the archive.");
 			e.printStackTrace();
 		}
+		dull = false;
+	}
+
+	/**
+	 * Replaces the specified archive with read data and rebuilds the cache.
+	 */
+	public void importArchive(Archive archive) {
+		dull = true;
+		CacheIndice indice = cache.getIndice(0);
+		try {
+			byte[] data = null;
+			String location = SwingUtils.getFilePath("Select Archive", Constants.getExportDirectory(), false, new JAGFileFilter());
+			if (location != null) {
+				data = DataUtils.readFile(location);
+			}
+			if (archive == interfaces) {
+				if (data != null) {
+					indice.updateFile(3, data);
+				}
+			}
+			if (archive == media) {
+				if (data != null) {
+					indice.updateFile(4, data);
+				}
+			}
+			if (data != null) {
+				cache.rebuildCache();
+				JOptionPane.showMessageDialog(this, "Archive replaced successfully.");
+			} else {
+				JOptionPane.showMessageDialog(this, "An error occurred while replacing the archive.");
+			}
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(this, "An error occurred while replacing the archive.");
+			e.printStackTrace();
+		}
+		dull = false;
+	}
+
+	/**
+	 * Dumps the specified archive to the export folder.
+	 */
+	public void dumpArchive(Archive archive) {
+		dull = true;
+		try {
+			String name = null;
+			if (archive == interfaces) {
+				name = "interface";
+			}
+			if (archive == media) {
+				name = "media";
+			}
+			DataUtils.writeFile(Constants.getExportDirectory() + name + ".jag", archive.recompile());
+			JOptionPane.showMessageDialog(this, "Archive dumped successfully.");
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(this, "An error occurred while dumping the archive.");
+			e.printStackTrace();
+		}
+		dull = false;
 	}
 
 	/**
@@ -82,7 +145,7 @@ public class Main extends Canvas implements Runnable {
 	public static void selectNextChild() {
 		RSInterface rsi = getInterface();
 		if (rsi.children != null) {
-			if (getSelectedIndex() + 1 < rsi.children.length) {
+			if (getSelectedIndex() + 1 < rsi.children.size()) {
 				selectChild(getSelectedIndex() + 1);
 			} else {
 				selectChild(0);
@@ -105,9 +168,9 @@ public class Main extends Canvas implements Runnable {
 			case 2:
 				return "item group";
 			case 3:
-				return "pixels: " + getInterface(id).width + "x" + getInterface(id).height;
+				return "pixels: " + RSInterface.getInterface(id).width + "x" + RSInterface.getInterface(id).height;
 			case 4:
-				return "text: " + getInterface(id).disabledText;
+				return "text: " + RSInterface.getInterface(id).disabledText;
 			case 5:
 				return "image";
 			case 6:
@@ -128,7 +191,7 @@ public class Main extends Canvas implements Runnable {
 		if (currentId == -1) {
 			return null;
 		}
-		return RSInterface.cache[currentId];
+		return RSInterface.getInterface(currentId);
 	}
 
 	/**
@@ -139,7 +202,7 @@ public class Main extends Canvas implements Runnable {
 		if (selectedId == -1) {
 			return null;
 		}
-		return RSInterface.cache[selectedId];
+		return RSInterface.getInterface(selectedId);
 	}
 
 	/**
@@ -150,16 +213,7 @@ public class Main extends Canvas implements Runnable {
 		if (hoverId == -1) {
 			return null;
 		}
-		return RSInterface.cache[hoverId];
-	}
-
-	/**
-	 * Gets the interface for the specified id.
-	 * @param id
-	 * @return
-	 */
-	public static RSInterface getInterface(int id) {
-		return RSInterface.cache[id];
+		return RSInterface.getInterface(hoverId);
 	}
 
 	/**
@@ -174,8 +228,8 @@ public class Main extends Canvas implements Runnable {
 		if (parent.children == null) {
 			return -1;
 		}
-		for (int index = 0; index < parent.children.length; index++) {
-			if (parent.children[index] == getSelected().id) {
+		for (int index = 0; index < parent.children.size(); index++) {
+			if (parent.children.get(index) == getSelected().id) {
 				return index;
 			}
 		}
@@ -214,9 +268,9 @@ public class Main extends Canvas implements Runnable {
 		if (parent == null || parent.children == null || child == null) {
 			return -1;
 		}
-		for (int index = 0; index < parent.children.length; index++) {
-			if (parent.children[index] == child.id) {
-				return parent.childX[index];
+		for (int index = 0; index < parent.children.size(); index++) {
+			if (parent.children.get(index) == child.id) {
+				return parent.childX.get(index);
 			}
 		}
 		return -1;
@@ -232,9 +286,9 @@ public class Main extends Canvas implements Runnable {
 		if (parent == null || parent.children == null || child == null) {
 			return -1;
 		}
-		for (int index = 0; index < parent.children.length; index++) {
-			if (parent.children[index] == child.id) {
-				return parent.childY[index];
+		for (int index = 0; index < parent.children.size(); index++) {
+			if (parent.children.get(index) == child.id) {
+				return parent.childY.get(index);
 			}
 		}
 		return -1;
@@ -248,8 +302,8 @@ public class Main extends Canvas implements Runnable {
 		RSInterface rsi = getInterface();
 		if (rsi != null) {
 			if (rsi.children != null) {
-				if (index < rsi.children.length - 1) {
-					selectedId = rsi.children[index];
+				if (index < rsi.children.size()) {
+					selectedId = rsi.children.get(index);
 				}
 			}
 		}
@@ -328,10 +382,10 @@ public class Main extends Canvas implements Runnable {
 	 */
 	public RSInterface[] getSelectedChildren() {
 		RSInterface parent = getInterface();
-		RSInterface[] children = new RSInterface[parent.children.length];
+		RSInterface[] children = new RSInterface[parent.children.size()];
 		int count = 0;
 		for (int index = 0; index < children.length; index++) {
-			RSInterface child = getInterface(parent.children[index]);
+			RSInterface child = RSInterface.getInterface(parent.children.get(index));
 			int childX = getX(parent, child);
 			int childY = getY(parent, child);
 			int childWidth = child.width;
@@ -479,7 +533,7 @@ public class Main extends Canvas implements Runnable {
 						ActionHandler.setZIndex(0);
 						break;
 					case 4:
-						ActionHandler.setZIndex(getInterface().children.length - 1);
+						ActionHandler.setZIndex(getInterface().children.size() - 1);
 						break;
 					case 5:
 						ActionHandler.toggleLock();
@@ -635,7 +689,7 @@ public class Main extends Canvas implements Runnable {
 			aBoolean1149 = true;
 		}
 		if(action == 626) {
-			RSInterface rsi = RSInterface.cache[id];
+			RSInterface rsi = RSInterface.getInterface(id);
 			String prefix = rsi.selectedActionName;
 			if(prefix.indexOf(" ") != -1) {
 				prefix = prefix.substring(0, prefix.indexOf(" "));
@@ -647,7 +701,7 @@ public class Main extends Canvas implements Runnable {
 			return;
 		}
 		if(action == 646) {
-			RSInterface rsi = RSInterface.cache[id];
+			RSInterface rsi = RSInterface.getInterface(id);
 			if(rsi.valueIndexArray != null && rsi.valueIndexArray[0][0] == 5) {
 				int setting = rsi.valueIndexArray[0][1];
 				if(variousSettings[setting] != rsi.requiredValues[0]) {
@@ -656,7 +710,7 @@ public class Main extends Canvas implements Runnable {
 			}
 		}
 		if(action == 169) {
-			RSInterface rsi = RSInterface.cache[id];
+			RSInterface rsi = RSInterface.getInterface(id);
 			if(rsi.valueIndexArray != null && rsi.valueIndexArray[0][0] == 5) {
 				int setting = rsi.valueIndexArray[0][1];
 				variousSettings[setting] = 1 - variousSettings[setting];
@@ -684,11 +738,11 @@ public class Main extends Canvas implements Runnable {
 		int endX = RSDrawingArea.endX;
 		int endY = RSDrawingArea.endY;
 		RSDrawingArea.setBounds(pos_x, pos_x + rsi.width, pos_y, pos_y + rsi.height);
-		int children = rsi.children.length;
+		int children = rsi.children.size();
 		for(int index = 0; index < children; index++) {
-			int x = rsi.childX[index] + pos_x;
-			int y = (rsi.childY[index] + pos_y) - offsetY;
-			RSInterface child = RSInterface.cache[rsi.children[index]];
+			int x = rsi.childX.get(index) + pos_x;
+			int y = (rsi.childY.get(index) + pos_y) - offsetY;
+			RSInterface child = RSInterface.getInterface(rsi.children.get(index));
 			x += child.drawOffsetX;
 			y += child.drawOffsetY;
 			if(child.contentType > 0) {	
@@ -1509,7 +1563,7 @@ public class Main extends Canvas implements Runnable {
 	private int[] minimum = { 75, 0, 0, 0 };
 	private int[] maximum = { 200, 256, 256, 256 };
 	private int[] rate = { 1, 8, 8, 8 };
-	public boolean saving = false;
+	public boolean dull = false;
 
 	public float progress;
 	public int menuOffsetX;

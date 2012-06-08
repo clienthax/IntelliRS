@@ -15,7 +15,7 @@ public class MyKeyListener implements KeyListener {
 		switch (key) {
 			case KeyEvent.VK_S:
 				if (control) {
-					Main.getInstance().recompile();
+					Main.getInstance().updateArchive(Main.interfaces);
 				}
 				break;
 			case KeyEvent.VK_O:

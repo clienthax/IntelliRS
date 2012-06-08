@@ -102,7 +102,11 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		JMenuBar menuBar = new JMenuBar();
 		String[] items = { "Open Interface", "Save", "-", "Import", "Export->", "-", "About", "Exit" };
 		String[] exportItems = { "Current", "Selected" };
-		JMenu menu = SwingUtils.buildMenu("File", items, exportItems);
+		JMenu file = SwingUtils.buildMenu("File", items, exportItems);
+		items = new String[]{ "Interface Archive->", "Media Archive->", "-", "Rebuild" };
+		String[] interfaceItems = { "Recompile<interfaces>", "Import<interfaces>", "Export<interfaces>" };
+		String[] mediaItems = { "Recompile<media>", "Import<media>", "Export<media>" };
+		JMenu cache = SwingUtils.buildMenu("Cache", items, interfaceItems, mediaItems);
 		displayGrid = new JCheckBox("Show grid");
 		displayGrid.addActionListener(SwingUtils.actionListener);
 		displayGrid.setSelected(Settings.displayGrid);
@@ -115,7 +119,8 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		forceEnabled = new JCheckBox("Force enabled");
 		forceEnabled.addActionListener(SwingUtils.actionListener);
 		forceEnabled.setSelected(Settings.forceEnabled);
-		menuBar.add(menu);
+		menuBar.add(file);
+		menuBar.add(cache);
 		menuBar.add(Box.createHorizontalGlue());
 		menuBar.add(displayGrid);
 		menuBar.add(displayData);
@@ -129,14 +134,14 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 		treeModel = new DefaultTreeModel(parent);
 		if (getInterface() != null) {
 			if (getInterface().children != null) {
-				for (int index = 0; index < getInterface().children.length; index++) {
-					RSInterface rsi_1 = RSInterface.cache[getInterface().children[index]];
-					DefaultMutableTreeNode child = new DefaultMutableTreeNode(Integer.toString(getInterface().children[index]) + " - " + getType(rsi_1.id, rsi_1.type));
+				for (int index = 0; index < getInterface().children.size(); index++) {
+					RSInterface rsi_1 = RSInterface.getInterface(getInterface().children.get(index));
+					DefaultMutableTreeNode child = new DefaultMutableTreeNode(Integer.toString(getInterface().children.get(index)) + " - " + getType(rsi_1.id, rsi_1.type));
 					treeModel.insertNodeInto(child, parent, index);
 					if (rsi_1.children != null) {
-						for (int childIndex = 0; childIndex < rsi_1.children.length; childIndex++) {
-							RSInterface rsi_2 = RSInterface.cache[rsi_1.children[childIndex]];
-							DefaultMutableTreeNode child2 = new DefaultMutableTreeNode(Integer.toString(rsi_1.children[childIndex]) + " - " + getType(rsi_2.id, rsi_2.type));
+						for (int childIndex = 0; childIndex < rsi_1.children.size(); childIndex++) {
+							RSInterface rsi_2 = RSInterface.getInterface(rsi_1.children.get(childIndex));
+							DefaultMutableTreeNode child2 = new DefaultMutableTreeNode(Integer.toString(rsi_1.children.get(childIndex)) + " - " + getType(rsi_2.id, rsi_2.type));
 							treeModel.insertNodeInto(child2, child, childIndex);
 						}
 					}
@@ -224,7 +229,7 @@ public class UserInterface extends Main implements ActionListener, TreeSelection
 					Settings.write();
 				}
 				if (cmd.equals("save")) {
-					Main.getInstance().recompile();
+					Main.getInstance().updateArchive(Main.interfaces);
 				}
 			}
 		} catch (Exception e) {

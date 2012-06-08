@@ -121,7 +121,7 @@ public class TextPane extends JFrame implements ActionListener, ItemListener {
 			other.setLayout(null);
 
 			String[] sizes = { "Small", "Regular", "Bold", "Script" };
-			font = new JComboBox();
+			font = new JComboBox<String>();
 			for (String name : sizes) {
 				font.addItem(name);
 			}
@@ -130,7 +130,7 @@ public class TextPane extends JFrame implements ActionListener, ItemListener {
 			font.setBounds(x, y, 75, 20);
 
 			String[] shadow = { "Unshadowed", "Shadowed" };
-			shadowed = new JComboBox();
+			shadowed = new JComboBox<String>();
 			for (String name : shadow) {
 				shadowed.addItem(name);
 			}
@@ -139,7 +139,7 @@ public class TextPane extends JFrame implements ActionListener, ItemListener {
 			shadowed.setBounds(x, y + 25, 100, 20);
 
 			String[] items = { "Uncentered", "Centered" };
-			centered = new JComboBox();
+			centered = new JComboBox<String>();
 			for (String name : items) {
 				centered.addItem(name);
 			}
@@ -291,8 +291,8 @@ public class TextPane extends JFrame implements ActionListener, ItemListener {
 	public JLabel[] colorLabels = new JLabel[4];
 	public JButton save;
 	public JButton cancel;
-	public JComboBox font;
-	public JComboBox centered;
-	public JComboBox shadowed;
+	public JComboBox<String> font;
+	public JComboBox<String> centered;
+	public JComboBox<String> shadowed;
 
 }

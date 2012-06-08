@@ -7,8 +7,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultTreeCellRenderer;
 
-import rs2.Main;
 import rs2.constants.Constants;
+import rs2.rsinterface.RSInterface;
 
 @SuppressWarnings("serial")
 public class CellRenderer extends DefaultTreeCellRenderer {
@@ -25,7 +25,7 @@ public class CellRenderer extends DefaultTreeCellRenderer {
 
 	protected boolean isLocked(Object value) {
 		int id = Integer.parseInt(value.toString().split(" ")[0]);
-		return Main.getInterface(id).locked;
+		return RSInterface.getInterface(id).locked;
 	}
 
 }

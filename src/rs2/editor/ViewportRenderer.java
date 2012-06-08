@@ -34,25 +34,25 @@ public class ViewportRenderer {
 				RSDrawingArea.drawUnfilledPixels(Main.getX(Main.getInterface(), Main.getHovered()), Main.getY(Main.getInterface(), Main.getHovered()), Main.getHovered().width, Main.getHovered().height, 0xffffff);
 			}
 			if (Main.selectedId != -1) {
-				instance.childActions = new String[]{ "Remove", "Move down", "Move up", "Move to back", "Move to front", Main.getSelected().locked ? "Unlock" : "Lock", "Edit" };
+				Main.getInstance().childActions[5] = Main.getSelected().locked ? "Unlock" : "Lock";
 				int x = -1;
 				int y = -1;
 				RSInterface child = null;
 				if (Main.getInterface().children != null) {
-					for (int index = 0; index < Main.getInterface().children.length; index++) {
-						if (Main.getInterface().children[index] == Main.selectedId) {
-							x = Main.getInterface().childX[index];
-							y = Main.getInterface().childY[index];
-							child = RSInterface.cache[Main.getInterface().children[index]];
+					for (int index = 0; index < Main.getInterface().children.size(); index++) {
+						if (Main.getInterface().children.get(index) == Main.selectedId) {
+							child = RSInterface.getInterface(Main.getInterface().children.get(index));
+							x = Main.getInterface().childX.get(index) + child.drawOffsetX;
+							y = Main.getInterface().childY.get(index) + child.drawOffsetY;
 							break;
 						} else {
-							if (RSInterface.cache[Main.getInterface().children[index]].children != null) {
-								child = RSInterface.cache[Main.getInterface().children[index]];
-								for (int childIndex = 0; childIndex < child.children.length; childIndex++) {
-									if (child.children[childIndex] == Main.selectedId) {
-										x = Main.getInterface().childX[index] + child.childX[childIndex];
-										y = Main.getInterface().childY[index] + child.childY[childIndex];
-										child = RSInterface.cache[child.children[childIndex]];
+							if (RSInterface.getInterface(Main.getInterface().children.get(index)).children != null) {
+								child = RSInterface.getInterface(Main.getInterface().children.get(index));
+								for (int childIndex = 0; childIndex < child.children.size(); childIndex++) {
+									if (child.children.get(childIndex) == Main.selectedId) {
+										child =RSInterface.getInterface(child.children.get(childIndex));
+										x = Main.getInterface().childX.get(index) + child.childX.get(childIndex) + child.drawOffsetX;
+										y = Main.getInterface().childY.get(index) + child.childY.get(childIndex) + child.drawOffsetY;
 										break;
 									}
 								}
@@ -86,7 +86,7 @@ public class ViewportRenderer {
 		instance.imageProducer.drawGraphics(0, 0, graphics);
 		drawGrid(graphics);
 		debugMouse(graphics);
-		if (instance.saving) {
+		if (instance.dull) {
 			graphics.setColor(new Color(0, 0, 0, 200));
 			graphics.fillRect(0, 0, instance.getCanvasWidth(), instance.getCanvasHeight());
 		}
@@ -229,8 +229,8 @@ public class ViewportRenderer {
 		if (Main.getInterface() == null || Main.getInterface().children == null) {
 			return;
 		}
-		for (int index = 0; index < Main.getInterface().children.length; index++) {
-			RSInterface child = Main.getInterface(Main.getInterface().children[index]);
+		for (int index = 0; index < Main.getInterface().children.size(); index++) {
+			RSInterface child = RSInterface.getInterface(Main.getInterface().children.get(index));
 			if (child.locked) {
 				RSDrawingArea.drawFilledAlphaPixels(Main.getX(Main.getInterface(), child), Main.getY(Main.getInterface(), child), child.width, child.height, 0, 150);
 				RSDrawingArea.drawUnfilledPixels(Main.getX(Main.getInterface(), child), Main.getY(Main.getInterface(), child), child.width, child.height, 0);

@@ -145,11 +145,11 @@ public class InputListener {
 			//return;
 		}
 		Main.hoverId = -1;
-		int childCount = rsi.children.length;
+		int childCount = rsi.children.size();
 		for(int index = 0; index < childCount; index++) {
-			int posX = rsi.childX[index];
-			int posY = rsi.childY[index] - offsetY;
-			RSInterface child = RSInterface.cache[rsi.children[index]];
+			int posX = rsi.childX.get(index);
+			int posY = rsi.childY.get(index) - offsetY;
+			RSInterface child = RSInterface.getInterface(rsi.children.get(index));
 			posX += child.drawOffsetX;
 			posY += child.drawOffsetY;
 			if (instance.mouseInRegion(posX, posX + child.width, posY, posY + child.height)) {

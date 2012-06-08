@@ -71,12 +71,4 @@ public class Constants {
 	public static String getExportDirectory() {
 		return "export" + System.getProperty("file.separator");
 	}
-
-	/**
-	 * Returns the import directory.
-	 * @return
-	 */
-	public static String getImportDirectory() {
-		return "import" + System.getProperty("file.separator");
-	}
 }

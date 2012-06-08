@@ -1,6 +1,8 @@
 package rs2.rsinterface;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedList;
 
 import rs2.Main;
 import rs2.cache.Archive;
@@ -25,8 +27,8 @@ public class RSInterface {
 		spriteNodes = new MemCache(50000);
 		byte[] data = interfaces.getFile("data");
 		JagexBuffer buffer = new JagexBuffer(data);
-		int total = buffer.getUnsignedShort();
-		cache = new RSInterface[total];
+		/*int total = */buffer.getUnsignedShort();
+		cache = new HashMap<Integer, RSInterface>();
 		while (buffer.offset < buffer.payload.length) {
 			RSInterface rsi = Utilities.readHeaderChunk(buffer);
 			Utilities.readTypeChunk(rsi, buffer);
@@ -40,8 +42,9 @@ public class RSInterface {
 	public static byte[] getData() {
 		try {
 			ExtendedByteArrayOutputStream buffer = new ExtendedByteArrayOutputStream();
-			buffer.putShort(cache.length);
-			for (RSInterface rsi : cache) {
+			buffer.putShort(cache.size());
+			for (int index = 0; index < cache.size(); index++) {
+				RSInterface rsi = cache.get(index);
 				if (rsi == null) {
 					continue;
 				}
@@ -87,7 +90,7 @@ public class RSInterface {
 				spriteNodes.put(sprite, hash);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 			return null;
 		}
 		return sprite;
@@ -115,6 +118,10 @@ public class RSInterface {
 		return children != null;
 	}
 
+	public static RSInterface getInterface(int id) {
+		return cache.get(id);
+	}
+
 	public RSInterface() {
 	}
 
@@ -122,7 +129,11 @@ public class RSInterface {
 	public RSImage disabledSprite;
 	public int framesLeft;
 	public RSImage sprites[];
-	public static RSInterface cache[];
+	public static HashMap<Integer, RSInterface> cache;
+	public LinkedList<Integer> children;
+	public LinkedList<Integer> childX;
+	public LinkedList<Integer> childY;
+	//public static RSInterface cache[];
 	public int requiredValues[];
 	public int contentType;
 	public int spritesX[];
@@ -149,8 +160,6 @@ public class RSInterface {
 	public int spellUsableOn;
 	protected static MemCache spriteNodes;
 	public int enabledHoverColor;
-	public int children[];
-	public int childX[];
 	public boolean usableItemInterface;
 	public RSFont font;
 	public int invSpritePadY;
@@ -179,7 +188,6 @@ public class RSInterface {
 	public int zoom;
 	public int rotationX;
 	public int rotationY;
-	public int childY[];
 	public String disabledSpriteArchive;
 	public int disabledSpriteId;
 	public String enabledSpriteArchive;
